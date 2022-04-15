@@ -1,33 +1,27 @@
 #ifndef __CPP_NAT_CLIENT
 #define __CPP_NAT_CLIENT
 
-#ifdef _WIN32
-#include <WinSock2.h>
-#else
-#endif
+#include <memory>
 
-#include "message.h"
+#ifdef _WIN32
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT
+#endif
 
 namespace cppnat
 {
-	constexpr unsigned short defaultClientPort = 64411;
-
-	class Client
+	class EXPORT Client
 	{
 	public:
-		Client(const char *serverAddr, unsigned short serverPort, unsigned short port = defaultClientPort);
-		~Client();
-		int Errno();
+		Client(const char *serverAddr, unsigned short serverPort, const char *forwardAddr, unsigned short forwardPort);
+		void Close();
+		bool Start();
 		const char *Error();
-		bool Begin();
 
 	protected:
-		void SetErrorMessage(const char *msg);
-		SOCKET fd;
-		SOCKET serverFd;
-		sockaddr_in serverAddr;
-		unsigned short listenPort;
-		char *errorMessage;
+		class Impl;
+		std::unique_ptr<Impl> pImpl;
 	};
 }
 

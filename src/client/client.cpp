@@ -1,100 +1,101 @@
 #include "client.h"
+#include <string>
+#include <vector>
+
+#ifdef _WIN32
+#include <WinSock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#endif
 
 using namespace cppnat;
-inline SOCKET ListenLocal(unsigned short port)
+
+#define CImpl Client::Impl
+
+class Client::Impl
 {
-	SOCKET fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (fd == INVALID_SOCKET)
-		return INVALID_SOCKET;
-	sockaddr_in addr;
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	addr.sin_zero[0] = 0;
-	if (bind(fd, (sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR)
-		return INVALID_SOCKET;
-	if (listen(fd, 10) == SOCKET_ERROR)
-		return INVALID_SOCKET;
-	return fd;
+public:
+	Impl();
+	inline void SetServer(const char *serverAddr, unsigned short port);
+	inline void SetForward(const char *forwardAddr, unsigned short forwardPort);
+	inline bool Start();
+	inline const char *Error();
+	inline void HandleServerMessage();
+
+protected:
+	void SetErrorInfo(const std::string &errorInfo);
+	std::string info;
+	sockaddr_in serverSockAddr;
+	SOCKET serverFd;
+	SOCKET dstFd;
+	sockaddr_in dstAddr;
+	char buffer[65536];
+};
+
+CImpl::Impl() : serverFd(INVALID_SOCKET), dstFd(INVALID_SOCKET), info("") {}
+const char *CImpl::Error() { return info.c_str(); }
+void CImpl::SetForward(const char *addr, unsigned short port)
+{
+	this->dstAddr.sin_family = AF_INET;
+	this->dstAddr.sin_addr.s_addr = inet_addr(addr);
+	this->dstAddr.sin_port = htons(port);
 }
 
-Client::Client(const char *serverAddr, unsigned short serverPort, unsigned short port) : listenPort(port), errorMessage(nullptr)
+void CImpl::SetServer(const char *addr, unsigned short port)
 {
-	this->fd = ListenLocal(port);
-	if (this->fd == INVALID_SOCKET)
-	{
-		SetErrorMessage("create client service failed");
-		return;
-	}
-	this->serverAddr.sin_family = AF_INET;
-	this->serverAddr.sin_port = htons(serverPort);
-	this->serverAddr.sin_addr.s_addr = inet_addr(serverAddr);
-	this->serverAddr.sin_zero[0] = 0;
+	this->serverSockAddr.sin_family = AF_INET;
+	this->serverSockAddr.sin_addr.s_addr = inet_addr(addr);
+	this->serverSockAddr.sin_port = htons(port);
+}
+
+bool CImpl::Start()
+{
 	this->serverFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (this->serverFd == INVALID_SOCKET)
 	{
-		SetErrorMessage("create server socket failed");
-		return;
+		this->SetErrorInfo("create server socket failed");
+		return false;
 	}
-	if (connect(this->serverFd, (sockaddr *)&this->serverAddr, sizeof(this->serverAddr)) == SOCKET_ERROR)
+	if (connect(this->serverFd, (sockaddr *)&this->serverSockAddr, sizeof(this->serverSockAddr)) == SOCKET_ERROR)
 	{
-		this->serverFd = INVALID_SOCKET;
-		SetErrorMessage("connect to server failed");
+		this->SetErrorInfo("connect to server failed");
+		return false;
 	}
-}
-
-inline void MessageLoop(SOCKET clientFd, SOCKET serverFd)
-{
-	FD_SET fdset;
-	FD_ZERO(&fdset);
-	FD_SET rlist;
-	FD_ZERO(&rlist);
-	FD_SET(clientFd, &fdset);
-	FD_SET(serverFd, &fdset);
+	fd_set fdSet;
+	FD_ZERO(&fdSet);
+	FD_SET(this->serverFd, &fdSet);
+	fd_set rlist;
+	timeval timeout{1, 0};
 	int count;
-	SOCKET maxFd = clientFd > serverFd ? clientFd : serverFd;
-
+	SOCKET maxSocket = serverFd;
+	constexpr int maxSocketNum = 128;
+	SOCKET socketList[maxSocketNum];
+	for (int i = 0; i < maxSocketNum; ++i)
+		socketList[i] = INVALID_SOCKET;
 	for (;;)
 	{
-		rlist = fdset;
-		count = select(maxFd + 1, &fdset, nullptr, nullptr, nullptr);
-		if (FD_ISSET(clientFd, &fdset))
+		count = select(maxSocket + 1, &rlist, nullptr, nullptr, &timeout);
+		if (count == SOCKET_ERROR)
 		{
-			count--;
+			this->SetErrorInfo("select failed");
+			return false;
 		}
-		if (FD_ISSET(serverFd, &fdset))
+		if (count == 0)
+			continue;
+		if (FD_ISSET(this->serverFd, &rlist))
 		{
 			count--;
+			this->HandleServerMessage();
 		}
 	}
 }
 
-bool Client::Begin()
-{
-	if (this->fd == INVALID_SOCKET)
-		return false;
-	if (this->serverFd == INVALID_SOCKET)
-		return false;
-	MessageLoop(this->fd, this->serverFd);
-	return true;
-}
+void Client::Impl::SetErrorInfo(const std::string &errorInfo) { info = errorInfo; }
 
-Client::~Client()
+Client::Client(const char *serverAddr, unsigned short serverPort, const char *forwardAddr, unsigned short forwardPort)
 {
-	if (this->fd != INVALID_SOCKET)
-		closesocket(this->fd);
-	if (this->serverFd != INVALID_SOCKET)
-		closesocket(this->serverFd);
-	if (this->errorMessage != nullptr)
-		delete[] this->errorMessage;
+	this->pImpl = std::make_unique<Impl>();
+	this->pImpl->SetServer(serverAddr, serverPort);
+	this->pImpl->SetForward(forwardAddr, forwardPort);
 }
-
-void Client::SetErrorMessage(const char *msg)
-{
-	if (this->errorMessage != nullptr)
-		delete[] this->errorMessage;
-	this->errorMessage = new char[strlen(msg) + 1];
-	strcpy(this->errorMessage, msg);
-}
-
-const char *Client::Error() { return this->errorMessage; }
+const char *Client::Error() { return this->pImpl->Error(); }
+bool Client::Start() { return this->pImpl->Start(); }
