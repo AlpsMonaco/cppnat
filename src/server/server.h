@@ -1,7 +1,12 @@
 #ifndef __CPP_NAT_SERVER
 #define __CPP_NAT_SERVER
 
+#ifdef _WIN32
 #include <WinSock2.h>
+#else
+#endif
+
+#include "message.h"
 
 namespace cppnat
 {

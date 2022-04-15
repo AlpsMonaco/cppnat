@@ -127,6 +127,7 @@ void Server::Begin()
 	{
 		if (this->stop)
 			break;
+		rlist = fdset;
 		count = select(maxSocket + 1, &rlist, NULL, NULL, NULL);
 		if (count == SOCKET_ERROR)
 			break;
