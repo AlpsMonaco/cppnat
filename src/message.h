@@ -3,6 +3,24 @@
 
 namespace cppnat
 {
+	/**
+	 * message format.
+	 * size + cmd + body
+	 */
+	constexpr int bufferSize = 65535;
+	constexpr int headerSize = 2;
+	constexpr int cmdSize = 2;
+	constexpr int bodySize = bufferSize - headerSize - cmdSize;
+
+	constexpr unsigned short CppNatVersion = 0x0001;
+	struct VersionInfo
+	{
+		unsigned short Version;
+		char Msg[15];
+	} versionInfo{
+		CppNatVersion,
+		"hello server"};
+
 	template <int bufferSize, int headerSize>
 	class Buffer
 	{
@@ -27,7 +45,6 @@ namespace cppnat
 	{
 		FAILED = 0x00,
 		SUCCESS = 0x01,
-		REMOTE_NOT_CONNECT = 0x02
 	};
 
 	enum class MsgEnum : unsigned short
@@ -35,17 +52,35 @@ namespace cppnat
 		ECHO = 0x0000,
 		ECHO_VERSION = 0x0001,
 
-		CMD_REQUEST_NAT = 0x0101,
-		CMD_TRANSPORT_DATA = 0x0102,
+		ON_NEW_CONNECTION = 0x0101,
+		ON_DATA_TRANSFER = 0x0102,
 	};
 
 	template <typename T>
-	unsigned short GetNumber(T t) { return static_cast<unsigned short>(t); }
+	inline unsigned short GetNumber(T t) { return static_cast<unsigned short>(t); }
 
-	struct RequestNAT
+	struct NewNat
 	{
-		unsigned short port;
-		char ip[16];
+		unsigned short Fd;
+	};
+
+	struct NewNatResult
+	{
+		unsigned short Code;
+		unsigned short Fd;
+	};
+
+	constexpr int FdSize = 2;
+	constexpr int DataCarrySize = bodySize - FdSize;
+	struct DataTransfer
+	{
+		unsigned short Fd;
+		char Data[DataCarrySize];
+	};
+
+	struct SocketClosed
+	{
+		unsigned short Fd;
 	};
 }
 

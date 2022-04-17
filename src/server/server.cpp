@@ -1,10 +1,8 @@
 #include "server.h"
 #include <iostream>
+#include "../message.h"
 
 using namespace cppnat;
-
-constexpr int bufferSize = 65536;
-constexpr int headerSize = 2;
 
 #define LOGINFO(s)                                \
 	do                                            \
@@ -63,115 +61,147 @@ int Server::Errno()
 #endif
 }
 
-/**
- * @brief a pair contains two sockets
- * @param fd1 default -1
- * @param fd2 default -1
- */
-struct ConnPair
+inline void PutSocketList(SOCKET socketList[], size_t socketListSize, SOCKET fd)
 {
-	ConnPair(int c1 = INVALID_SOCKET, int c2 = INVALID_SOCKET) : c1(c1), c2(c2)
+	for (size_t i = 0; i < socketListSize; i++)
 	{
-		memset(&s1, 0, sizeof(s1));
-		memset(&s2, 0, sizeof(s2));
+		if (socketList[i] == INVALID_SOCKET)
+		{
+			socketList[i] = fd;
+			return;
+		}
 	}
-	/**
-	 * @brief call this function when one socket is close;
-	 * @param fd socket to be closed
-	 */
-	void Disconnect(int fd)
-	{
-		if (fd == c1)
-			c1 = INVALID_SOCKET;
-		else if (fd == c2)
-			c2 = INVALID_SOCKET;
-	}
-	SOCKET c1;
-	sockaddr_in s1;
-	SOCKET c2;
-	sockaddr_in s2;
-};
-
-inline void Handle(SOCKET &fd, SOCKET &another, FD_SET *pfdset, ConnPair &connPair)
-{
-	static char buf[bufferSize];
-	int len = recv(fd, buf, bufferSize, 0);
-	if (len == 0)
-	{
-		connPair.Disconnect(fd);
-		FD_CLR(fd, pfdset);
-		closesocket(fd);
-		/**
-		 * @todo:send fd is disconnected to another
-		 */
-		return;
-	}
-	send(another, buf, len, 0);
 }
 
-void Server::Begin()
+inline void RemoveSocketList(SOCKET socketList[], size_t socketListSize, SOCKET fd)
 {
-	FD_SET fdset;
-	FD_ZERO(&fdset);
-	FD_SET rlist;
-	FD_ZERO(&rlist);
-	FD_SET(this->fd, &fdset);
-	ConnPair connPair;
-	socklen_t len1 = sizeof(connPair.s1);
-	socklen_t len2 = sizeof(connPair.s2);
+	for (size_t i = 0; i < socketListSize; i++)
+	{
+		if (socketList[i] == fd)
+		{
+			socketList[i] = INVALID_SOCKET;
+			return;
+		}
+	}
+}
+
+inline void InitSocketList(SOCKET socketList[], size_t socketListSize)
+{
+	for (size_t i = 0; i < socketListSize; i++)
+		socketList[i] = INVALID_SOCKET;
+}
+
+inline bool AcceptAsClient(const char *buffer, int recvSize)
+{
+	if (recvSize < sizeof(VersionInfo))
+		return false;
+	VersionInfo *info = (VersionInfo *)buffer;
+	return (info->Version == versionInfo.Version && strcmp(info->Msg, versionInfo.Msg) == 0);
+}
+
+inline bool RequestNewNat(SOCKET fd) {}
+
+bool Server::Begin()
+{
+	fd_set fdSet, rlist;
+	FD_ZERO(&fdSet);
+	FD_SET(this->fd, &fdSet);
+
 	SOCKET maxSocket = this->fd;
-	int count;
+	SOCKET uniqueClientSocket = INVALID_SOCKET;
+	constexpr size_t socketNum = 128;
+	SOCKET socketList[socketNum];
+	InitSocketList(socketList, socketNum);
+
+	sockaddr_in tempSockAddr;
+	socklen_t tempSockLen;
+	SOCKET tempFd = INVALID_SOCKET;
+
+	char buffer[bufferSize];
+
 	timeval timeout{1, 0};
+	int count, recvSize;
 
 	for (;;)
 	{
 		if (this->stop)
+		{
+			//@todo recycle socket
 			break;
-		rlist = fdset;
-		count = select(maxSocket + 1, &rlist, NULL, NULL, NULL);
+		}
+
+		rlist = fdSet;
+		count = select(maxSocket + 1, &rlist, nullptr, nullptr, &timeout);
 		if (count == SOCKET_ERROR)
-			break;
-		if (FD_ISSET(this->fd, &rlist))
+			return false;
+		if (count == 0)
+			continue;
+		if (FD_ISSET(this->fd, &fdSet))
 		{
 			count--;
-			if (connPair.c1 == INVALID_SOCKET)
+			tempFd = accept(this->fd, (sockaddr *)&tempSockAddr, &tempSockLen);
+			if (tempFd == INVALID_SOCKET)
+				return false;
+			do
 			{
-				connPair.c1 = accept(this->fd, (sockaddr *)&connPair.s1, &len1);
-				if (connPair.c1 == INVALID_SOCKET)
+				if (uniqueClientSocket != INVALID_SOCKET)
+				{
+					if (!RequestNewNat(tempFd))
+					{
+						closesocket(tempFd);
+						break;
+					}
+				}
+				FD_SET(tempFd, &fdSet);
+				maxSocket = tempFd > maxSocket ? tempFd : maxSocket;
+				PutSocketList(socketList, socketNum, fd);
+			} while (0);
+		}
+		if (uniqueClientSocket != INVALID_SOCKET)
+		{
+			for (int i = 0; i < socketNum; i++)
+			{
+				if (count == 0)
 					break;
-				FD_SET(connPair.c1, &fdset);
-				if (connPair.c1 > maxSocket)
-					maxSocket = connPair.c1;
-				LOGINFO(std::string("accept c1"));
-			}
-			else if (connPair.c2 == INVALID_SOCKET)
-			{
-				connPair.c2 = accept(this->fd, (sockaddr *)&connPair.s2, &len2);
-				if (connPair.c2 == INVALID_SOCKET)
-					break;
-				FD_SET(connPair.c2, &fdset);
-				if (connPair.c2 > maxSocket)
-					maxSocket = connPair.c2;
-				LOGINFO(std::string("accept c2"));
-			}
-			else
-			{
-				static sockaddr_in tempAddr;
-				static SOCKET tempFd;
-				static socklen_t tempLen;
-				tempFd = accept(this->fd, (sockaddr *)&tempAddr, &tempLen);
-				closesocket(tempFd);
-				send(tempFd, "forbidden", 9, 0);
-				LOGINFO(std::string("invalid client connect"));
 			}
 		}
-		while (count > 0)
+		else
 		{
-			count--;
-			if (FD_ISSET(connPair.c1, &rlist))
-				Handle(connPair.c1, connPair.c2, &fdset, connPair);
-			else
-				Handle(connPair.c2, connPair.c1, &fdset, connPair);
+			for (int i = 0; i < socketNum; i++)
+			{
+				if (count == 0)
+					break;
+				tempFd = socketList[i];
+				if (tempFd == INVALID_SOCKET)
+					continue;
+				if (FD_ISSET(tempFd, &rlist))
+				{
+					recvSize = recv(tempFd, buffer, bufferSize, 0);
+					if (recvSize == SOCKET_ERROR)
+					{
+						FD_CLR(tempFd, &fdSet);
+						RemoveSocketList(socketList, socketNum, tempFd);
+					}
+					if (AcceptAsClient(buffer, recvSize))
+					{
+						uniqueClientSocket = tempFd;
+						RemoveSocketList(socketList, socketNum, tempFd);
+						unsigned short code = GetNumber(MsgCode::SUCCESS);
+						int sendSize = send(tempFd, (char *)&code, sizeof(code), 0);
+						if (sendSize == SOCKET_ERROR)
+						{
+							FD_CLR(tempFd, &fdSet);
+							RemoveSocketList(socketList, socketNum, tempFd);
+						}
+					}
+					else
+					{
+						closesocket(tempFd);
+						FD_CLR(tempFd, &fdSet);
+						RemoveSocketList(socketList, socketNum, tempFd);
+					}
+				}
+			}
 		}
 	}
 }

@@ -38,6 +38,7 @@ struct TestStruct
 
 int main(int argc, char *argv[])
 {
+	Println(sizeof(TestStruct));
 	MyStruct ms{1, 'a', 1};
 	Println(sizeof(double));
 	Println(sizeof(char));

@@ -1,4 +1,5 @@
 #include "client.h"
+#include "../message.h"
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@ class Client::Impl
 {
 public:
 	Impl();
+	~Impl();
 	inline void SetServer(const char *serverAddr, unsigned short port);
 	inline void SetForward(const char *forwardAddr, unsigned short forwardPort);
 	inline bool Start();
@@ -28,10 +30,23 @@ protected:
 	SOCKET serverFd;
 	SOCKET dstFd;
 	sockaddr_in dstAddr;
-	char buffer[65536];
 };
 
-CImpl::Impl() : serverFd(INVALID_SOCKET), dstFd(INVALID_SOCKET), info("") {}
+CImpl::Impl() : serverFd(INVALID_SOCKET), dstFd(INVALID_SOCKET), info("")
+{
+#ifdef _WIN32
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif
+}
+
+CImpl::~Impl()
+{
+#ifdef _WIN32
+	WSACleanup();
+#endif
+}
+
 const char *CImpl::Error() { return info.c_str(); }
 void CImpl::SetForward(const char *addr, unsigned short port)
 {
@@ -60,12 +75,39 @@ bool CImpl::Start()
 		this->SetErrorInfo("connect to server failed");
 		return false;
 	}
+
+	int count;
+	count = send(this->serverFd, (const char *)&versionInfo, sizeof(VersionInfo), 0);
+	if (count == SOCKET_ERROR)
+	{
+		this->SetErrorInfo("send version info failed");
+		return false;
+	}
+	char buffer[bufferSize];
+	count = recv(this->serverFd, buffer, bufferSize, 0);
+	if (count == SOCKET_ERROR)
+	{
+		this->SetErrorInfo("recv version info failed");
+		return false;
+	}
+	unsigned short code = GetNumber(MsgCode::SUCCESS);
+	if (count < sizeof(code))
+	{
+		this->SetErrorInfo("recv version info size error");
+		return false;
+	}
+	if (code != *((unsigned short *)buffer))
+	{
+		this->SetErrorInfo("recv version info error");
+		return false;
+	}
+
 	fd_set fdSet;
 	FD_ZERO(&fdSet);
 	FD_SET(this->serverFd, &fdSet);
 	fd_set rlist;
 	timeval timeout{1, 0};
-	int count;
+
 	SOCKET maxSocket = serverFd;
 	constexpr int maxSocketNum = 128;
 	SOCKET socketList[maxSocketNum];

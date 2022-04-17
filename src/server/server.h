@@ -16,7 +16,7 @@ namespace cppnat
 		Server(const char *addr, int port);
 		~Server();
 		bool Listen();
-		void Begin();
+		bool Begin();
 		void Stop();
 		int Errno();
 
