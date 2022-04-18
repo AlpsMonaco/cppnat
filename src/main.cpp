@@ -21,35 +21,32 @@ void Println(Args... args)
 
 #endif
 
-struct MyStruct
-{
-	long long dda1;
-	unsigned char dda;
-	int type;
-};
+#include "message.hpp"
 
-struct TestStruct
+inline long GetHeader(unsigned short size, unsigned short cmd)
 {
-	char a;
-	short b;
-	short c;
-	char s[255];
-};
+	return (size << 16) | cmd;
+}
 
 int main(int argc, char *argv[])
 {
-	Println(sizeof(TestStruct));
-	MyStruct ms{1, 'a', 1};
-	Println(sizeof(double));
-	Println(sizeof(char));
-	Println(sizeof(int));
-	Println(ms.dda1, ms.dda, ms.type);
-	char data[64];
-	memset(data, 0, 64);
-	memcpy(data, &ms, sizeof(ms));
-	data[sizeof(ms)] = 0;
+	cppnat::Buffer<65535, 4> buffer;
+	buffer.SetHeader(0x0301);
+	buffer.Get<unsigned short>() = 23;
+
+	auto a = buffer.GetBuffer();
 	for (int i = 0; i < 64; i++)
 	{
-		Print(unsigned int(data[i]), "");
+		Println(int(a[i]));
 	}
+
+	unsigned int value = 0x04030201;
+	char *aaa = reinterpret_cast<char *>(&value);
+	Println(int(aaa[0]));
+	Println(int(aaa[1]));
+	Println(int(aaa[2]));
+	Println(int(aaa[3]));
+	Println(sizeof(long));
+
+	Println(GetHeader(0x0403, 0x0201));
 }

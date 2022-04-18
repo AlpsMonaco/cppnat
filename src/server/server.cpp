@@ -1,6 +1,5 @@
 #include "server.h"
 #include <iostream>
-#include "../message.h"
 
 using namespace cppnat;
 
@@ -99,7 +98,9 @@ inline bool AcceptAsClient(const char *buffer, int recvSize)
 	return (info->Version == versionInfo.Version && strcmp(info->Msg, versionInfo.Msg) == 0);
 }
 
-inline bool RequestNewNat(SOCKET fd) {}
+inline bool RequestNewNat(SOCKET clientFd, SOCKET fd, char *buffer, int bufferSize)
+{
+}
 
 bool Server::Begin()
 {
@@ -146,7 +147,7 @@ bool Server::Begin()
 			{
 				if (uniqueClientSocket != INVALID_SOCKET)
 				{
-					if (!RequestNewNat(tempFd))
+					if (!RequestNewNat(uniqueClientSocket, tempFd, buffer, bufferSize))
 					{
 						closesocket(tempFd);
 						break;

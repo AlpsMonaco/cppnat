@@ -1,12 +1,7 @@
 #include "client.h"
-#include "../message.h"
+#include "client_message.hpp"
 #include <string>
 #include <vector>
-
-#ifdef _WIN32
-#include <WinSock2.h>
-#pragma comment(lib, "ws2_32.lib")
-#endif
 
 using namespace cppnat;
 
@@ -17,22 +12,30 @@ class Client::Impl
 public:
 	Impl();
 	~Impl();
+
 	inline void SetServer(const char *serverAddr, unsigned short port);
 	inline void SetForward(const char *forwardAddr, unsigned short forwardPort);
 	inline bool Start();
 	inline const char *Error();
 	inline void HandleServerMessage();
 
+	using any = void *;
+	using Callback = void (*)(any, SOCKET, DataManager *dataManager);
+
 protected:
+	void InitHandlers();
+	void InitDataManager();
 	void SetErrorInfo(const std::string &errorInfo);
 	std::string info;
 	sockaddr_in serverSockAddr;
 	SOCKET serverFd;
-	SOCKET dstFd;
 	sockaddr_in dstAddr;
+	MessageHandler<Callback> handler;
+	WriteBuffer writeBuffer;
+	DataManager dataManager;
 };
 
-CImpl::Impl() : serverFd(INVALID_SOCKET), dstFd(INVALID_SOCKET), info("")
+CImpl::Impl() : serverFd(INVALID_SOCKET), info("")
 {
 #ifdef _WIN32
 	WSADATA wsaData;
@@ -60,6 +63,17 @@ void CImpl::SetServer(const char *addr, unsigned short port)
 	this->serverSockAddr.sin_family = AF_INET;
 	this->serverSockAddr.sin_addr.s_addr = inet_addr(addr);
 	this->serverSockAddr.sin_port = htons(port);
+}
+
+void CImpl::InitHandlers()
+{
+	this->handler.AddCallback(MsgEnum::NEW_NAT_REQUEST, &FnNewNatRequest);
+}
+
+void CImpl::InitDataManager()
+{
+	this->dataManager.Put(GetNumber(DataId::CLIENT), this);
+	this->dataManager.Put(GetNumber(DataId::WRITE_BUFFER), &this->writeBuffer);
 }
 
 bool CImpl::Start()
@@ -101,6 +115,8 @@ bool CImpl::Start()
 		this->SetErrorInfo("recv version info error");
 		return false;
 	}
+
+	this->InitHandlers();
 
 	fd_set fdSet;
 	FD_ZERO(&fdSet);
