@@ -13,10 +13,6 @@
 
 namespace cppnat
 {
-	/**
-	 * message format.
-	 * size + cmd + body
-	 */
 	constexpr int bufferSize = 65535;
 	constexpr int headerSize = 4;
 
@@ -104,19 +100,72 @@ namespace cppnat
 		std::map<MsgEnum, Callback> callbackMap;
 	};
 
-	struct MsgNewNatRequest
+	class Message
+	{
+	public:
+		Message() { ASSERT("a message should not construct", false); }
+		virtual ~Message() { ASSERT("a message should not destruct", false); }
+		virtual unsigned short GetSize() = 0;
+		virtual MsgEnum GetMsgEnum() = 0;
+	};
+
+	struct MsgNewNatRequest : public Message
 	{
 		unsigned short fd;
+		unsigned short GetSize() override { return sizeof(fd); }
+		MsgEnum GetMsgEnum() override { return MsgEnum::NEW_NAT_REQUEST; }
+	};
+
+	constexpr int dataTransferSize = bufferSize - headerSize - sizeof(unsigned short) * 2;
+	struct MsgDataTransfer : public Message
+	{
+		unsigned short fd;
+		unsigned short dataSize;
+		char data[dataTransferSize];
+		unsigned short GetSize() override { return sizeof(fd) + sizeof(dataSize) + dataSize; }
+		MsgEnum GetMsgEnum() override { return MsgEnum::DATA_TRANSFER; }
+		constexpr int GetMaxBufferSize() { return dataTransferSize; }
+	};
+
+	template <typename BufferType, typename HeaderType, int headerSize>
+	class MessageWriterBuffer
+	{
+	public:
+		MessageWriterBuffer(BufferType &buffer)
+		{
+			assert(sizeof(HeaderType) == headerSize);
+			this->buffer = buffer;
+		}
+
+		BufferType &operator()(SOCKET fd)
+		{
+			this->fd = fd;
+			return this->buffer;
+		}
+
+		bool Write()
+		{
+			Message &msg = this->buffer.GetBuffer()[headerSize];
+			unsigned short totalSize = msg.GetSize() + headerSize;
+			this->buffer.SetHeader(HeaderType(totalSize << 16 | GetNumber(msg.GetMsgEnum())));
+			return send(this->fd, this->buffer.GetBuffer(), totalSize, 0) != SOCKET_ERROR;
+		}
+
+	protected:
+		BufferType &buffer;
+		SOCKET fd;
 	};
 
 	enum class DataId : unsigned short
 	{
 		CLIENT = 0x0000,
 		SERVER,
+		LOCAL_BUFFER,
 		WRITE_BUFFER,
 		FD_SET,
 		PRIVATE_SOCKADDR,
 		BIND_MAP,
+		MESSAGE_WRITER,
 
 		END,
 	};
@@ -180,8 +229,13 @@ namespace cppnat
 		LockerProxy<LockerInstance> proxy;
 	};
 
+	inline bool Send(SOCKET fd, const char *buffer, int size) { return send(fd, buffer, size, 0) != SOCKET_ERROR ? true : false; }
+	inline bool Send(SOCKET fd, MsgCode &code) { return send(fd, reinterpret_cast<char *>(&code), sizeof(code), 0) != SOCKET_ERROR ? true : false; }
+	inline bool Send(SOCKET fd, WriteBuffer &buffer, int size) { return send(fd, buffer.GetBuffer(), size, 0) != SOCKET_ERROR ? true : false; }
+
 	using DataManager = Locker<GetNumber(DataId::END)>;
 	using BindMap = std::map<SOCKET, SOCKET>;
+	using MessageWriter = MessageWriterBuffer<WriteBuffer, unsigned long, headerSize>;
 }
 
 #endif

@@ -21,6 +21,15 @@ void Println(Args... args)
 
 #endif
 
+struct test
+{
+	short a;
+	short b;
+	short c;
+	~test() { Println("~test"); }
+	void print() { Println(a, b, c); }
+};
+
 #include "message.hpp"
 
 int main()
@@ -37,9 +46,15 @@ int main()
 	cppnat::Buffer<65535, 4> buffer;
 	buffer.SetHeader(long(0x04030201));
 	long long &value = buffer;
-	value = 0x05060708;
+	value = 0xFFFFFFFFFFFF;
 
 	const char *b = buffer.GetBuffer();
-	for (int i = 0; i < 64; i++)
+	for (int i = 0; i < 32; i++)
 		Println(int(b[i]));
+	test &testRef = buffer;
+	testRef.print();
+
+	cppnat::MsgNewNatRequest *newNatRequest = new cppnat::MsgNewNatRequest();
+	delete newNatRequest;
+	Println("endl");
 }

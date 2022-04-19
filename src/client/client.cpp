@@ -26,18 +26,21 @@ protected:
 	void InitHandlers();
 	void InitDataManager();
 	void SetErrorInfo(const std::string &errorInfo);
+
 	std::string info;
 	sockaddr_in serverSockAddr;
 	SOCKET serverFd;
 	sockaddr_in dstAddr;
 	MessageHandler<Callback> handler;
 	fd_set fdSet;
+	WriteBuffer localBuffer;
 	WriteBuffer writeBuffer;
 	DataManager dataManager;
 	BindMap bindMap;
+	MessageWriter messageWriter;
 };
 
-CImpl::Impl() : serverFd(INVALID_SOCKET), info("")
+CImpl::Impl() : serverFd(INVALID_SOCKET), info(""), writeBuffer(), messageWriter(writeBuffer)
 {
 #ifdef _WIN32
 	WSADATA wsaData;
@@ -79,6 +82,8 @@ void CImpl::InitDataManager()
 	this->dataManager.Put(DataId::FD_SET, &this->fdSet);
 	this->dataManager.Put(DataId::PRIVATE_SOCKADDR, &this->dstAddr);
 	this->dataManager.Put(DataId::BIND_MAP, &this->bindMap);
+	this->dataManager.Put(DataId::MESSAGE_WRITER, &this->messageWriter);
+	this->dataManager.Put(DataId::LOCAL_BUFFER, &this->localBuffer);
 }
 
 bool CImpl::Start()
