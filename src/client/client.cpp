@@ -20,7 +20,7 @@ public:
 	inline void HandleServerMessage();
 
 	using any = void *;
-	using Callback = void (*)(any, SOCKET, DataManager *dataManager);
+	using Callback = void (*)(any, SOCKET, DataManager &dataManager);
 
 protected:
 	void InitHandlers();
@@ -72,8 +72,6 @@ void CImpl::InitHandlers()
 
 void CImpl::InitDataManager()
 {
-	this->dataManager.Put(GetNumber(DataId::CLIENT), this);
-	this->dataManager.Put(GetNumber(DataId::WRITE_BUFFER), &this->writeBuffer);
 }
 
 bool CImpl::Start()

@@ -46,20 +46,8 @@ namespace cppnat
 		SOCKET_CLOSED = 0x0104,
 	};
 
-	enum class DataId : unsigned short
-	{
-		CLIENT = 0x0000,
-		SERVER = 0x0001,
-		WRITE_BUFFER = 0x0003,
-
-		END,
-	};
-
 	template <typename T>
-	inline constexpr unsigned short GetNumber(T t)
-	{
-		return static_cast<const unsigned short>(t);
-	}
+	inline constexpr unsigned short GetNumber(T t) { return static_cast<const unsigned short>(t); }
 
 	template <int bufferSize, int headerSize>
 	class Buffer
@@ -84,6 +72,12 @@ namespace cppnat
 
 		template <typename T>
 		T &Get() { return *reinterpret_cast<T *>(&(data)[0]); }
+
+		template <typename T>
+		operator T &() { return *reinterpret_cast<T *>(&(data)[0]); }
+
+		template <typename T>
+		operator T() = delete;
 
 		char *GetBuffer() { return buffer; }
 		const char *GetBuffer() const { return buffer; }
@@ -115,41 +109,72 @@ namespace cppnat
 		unsigned short fd;
 	};
 
+	enum class DataId : unsigned short
+	{
+		CLIENT = 0x0000,
+		SERVER = 0x0001,
+		WRITE_BUFFER = 0x0002,
+
+		END,
+	};
+
+	template <typename LockerType>
+	class LockerProxy
+	{
+	public:
+		LockerProxy(LockerType &locker) : locker(locker) {}
+		void SetDataId(DataId dataId) { this->dataId = dataId; }
+
+		template <typename T>
+		operator T &() { return *reinterpret_cast<T *>(locker.Fetch(dataId)); }
+
+		template <typename T>
+		operator T() = delete;
+
+	protected:
+		DataId dataId;
+		LockerType &locker;
+	};
+
 	template <int lockerSize>
 	class Locker
 	{
 	public:
 		using any = void *;
-		Locker() {}
+		using LockerInstance = Locker<lockerSize>;
+
+		Locker() : proxy(*this) {}
 		~Locker() {}
 
-		void Put(int index, any p)
+		LockerInstance &operator=(const LockerInstance &rhs) = delete;
+
+		void Put(DataId dataId, any p)
 		{
-			assert(index < lockerSize);
-			this->locker[index] = p;
+			assert(dataId < DataId::END);
+			this->locker[static_cast<int>(dataId)] = p;
 		}
 
-		template <typename T>
-		T &Get(int index)
+		any Fetch(DataId dataId)
 		{
-			assert(index < lockerSize);
-			return *reinterpret_cast<T *>(this->locker[index]);
+			assert(dataId < DataId::END);
+			return this->locker[static_cast<int>(dataId)];
 		}
 
-		template <typename T>
-		T &Get(DataId dataId)
+		LockerProxy<LockerInstance> &Get(DataId dataId)
 		{
-			return *reinterpret_cast<T *>(this->locker[GetNumber(dataId)]);
+			proxy.SetDataId(dataId);
+			return proxy;
 		}
 
-		template <typename T>
-		T &operator[](DataId dataId)
+		LockerProxy<LockerInstance> &operator[](DataId dataId)
 		{
-			return *reinterpret_cast<T *>(this->locker[GetNumber(dataId)]);
+			proxy.SetDataId(dataId);
+			return proxy;
 		}
 
 	protected:
 		any locker[lockerSize];
+		LockerProxy<LockerInstance> proxy;
 	};
 
 	using DataManager = Locker<GetNumber(DataId::END)>;

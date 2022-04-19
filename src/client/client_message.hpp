@@ -7,7 +7,7 @@ namespace cppnat
 {
 	inline long GetHeader(unsigned short size, unsigned short cmd) { return (size << 16) | cmd; }
 
-	void FnNewNatRequest(MsgNewNatRequest *newNatRequest, SOCKET serverFd, DataManager *dataManager)
+	void FnNewNatRequest(MsgNewNatRequest *newNatRequest, SOCKET serverFd, DataManager &dataManager)
 	{
 	}
 }

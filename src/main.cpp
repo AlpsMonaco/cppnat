@@ -23,30 +23,23 @@ void Println(Args... args)
 
 #include "message.hpp"
 
-inline long GetHeader(unsigned short size, unsigned short cmd)
+int main()
 {
-	return (size << 16) | cmd;
-}
+	int i = 1;
+	short j = 2;
+	cppnat::DataManager dataManager;
+	dataManager.Put(cppnat::DataId::CLIENT, &i);
+	dataManager.Put(cppnat::DataId::SERVER, &j);
 
-int main(int argc, char *argv[])
-{
+	short &k = dataManager[cppnat::DataId::SERVER];
+	k = 3;
+
 	cppnat::Buffer<65535, 4> buffer;
-	buffer.SetHeader(0x0301);
-	buffer.Get<unsigned short>() = 23;
+	buffer.SetHeader(long(0x04030201));
+	long long &value = buffer;
+	value = 0x05060708;
 
-	auto a = buffer.GetBuffer();
+	const char *b = buffer.GetBuffer();
 	for (int i = 0; i < 64; i++)
-	{
-		Println(int(a[i]));
-	}
-
-	unsigned int value = 0x04030201;
-	char *aaa = reinterpret_cast<char *>(&value);
-	Println(int(aaa[0]));
-	Println(int(aaa[1]));
-	Println(int(aaa[2]));
-	Println(int(aaa[3]));
-	Println(sizeof(long));
-
-	Println(GetHeader(0x0403, 0x0201));
+		Println(int(b[i]));
 }
