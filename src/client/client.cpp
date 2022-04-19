@@ -31,8 +31,10 @@ protected:
 	SOCKET serverFd;
 	sockaddr_in dstAddr;
 	MessageHandler<Callback> handler;
+	fd_set fdSet;
 	WriteBuffer writeBuffer;
 	DataManager dataManager;
+	BindMap bindMap;
 };
 
 CImpl::Impl() : serverFd(INVALID_SOCKET), info("")
@@ -72,6 +74,11 @@ void CImpl::InitHandlers()
 
 void CImpl::InitDataManager()
 {
+	this->dataManager.Put(DataId::CLIENT, this);
+	this->dataManager.Put(DataId::WRITE_BUFFER, &this->writeBuffer);
+	this->dataManager.Put(DataId::FD_SET, &this->fdSet);
+	this->dataManager.Put(DataId::PRIVATE_SOCKADDR, &this->dstAddr);
+	this->dataManager.Put(DataId::BIND_MAP, &this->bindMap);
 }
 
 bool CImpl::Start()
@@ -116,7 +123,6 @@ bool CImpl::Start()
 
 	this->InitHandlers();
 
-	fd_set fdSet;
 	FD_ZERO(&fdSet);
 	FD_SET(this->serverFd, &fdSet);
 	fd_set rlist;

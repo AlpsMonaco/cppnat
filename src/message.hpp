@@ -112,8 +112,11 @@ namespace cppnat
 	enum class DataId : unsigned short
 	{
 		CLIENT = 0x0000,
-		SERVER = 0x0001,
-		WRITE_BUFFER = 0x0002,
+		SERVER,
+		WRITE_BUFFER,
+		FD_SET,
+		PRIVATE_SOCKADDR,
+		BIND_MAP,
 
 		END,
 	};
@@ -178,6 +181,7 @@ namespace cppnat
 	};
 
 	using DataManager = Locker<GetNumber(DataId::END)>;
+	using BindMap = std::map<SOCKET, SOCKET>;
 }
 
 #endif
