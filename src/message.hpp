@@ -17,35 +17,11 @@ namespace cppnat
 	constexpr int headerSize = 4;
 
 	constexpr unsigned short CppNatVersion = 0x0001;
-	struct VersionInfo
-	{
-		unsigned short Version;
-		char Msg[15];
-	} versionInfo{
-		CppNatVersion,
-		"hello server"};
-
-	enum class MsgCode : unsigned short
-	{
-		FAILED = 0x00,
-		SUCCESS = 0x01,
-	};
-
-	enum class MsgEnum : unsigned short
-	{
-		ECHO = 0x0000,
-		ECHO_VERSION = 0x0001,
-
-		NEW_NAT_REQUEST = 0x0101,
-		NEW_NAT_RESULT = 0x0102,
-		DATA_TRANSFER = 0x0103,
-		SOCKET_CLOSED = 0x0104,
-	};
 
 	template <typename T>
 	inline constexpr unsigned short GetNumber(T t) { return static_cast<const unsigned short>(t); }
 
-	template <int bufferSize, int headerSize>
+	template <int bufferSize, int headerSize = headerSize>
 	class Buffer
 	{
 	public:
@@ -86,74 +62,80 @@ namespace cppnat
 
 	using WriteBuffer = Buffer<bufferSize, headerSize>;
 
-	template <typename FnPtr>
-	class MessageHandler
+	template <class SocketErrorReactor>
+	class SocketWrapper
 	{
 	public:
-		using Callback = FnPtr;
-		MessageHandler() {}
+		using InstanceType = SocketWrapper<SocketErrorReactor>;
+		SocketWrapper(SocketErrorReactor &errorReactor) : errorReactor(errorReactor) {}
+		InstanceType &operator()(SOCKET fd)
+		{
+			this->fd = fd;
+			return *this;
+		}
 
-		template <typename Fn>
-		void AddCallback(MsgEnum msg, Fn fn) { this->callbackMap.emplace(msg, reinterpret_cast<Callback>(fn)); }
+		inline bool Read(char *buffer, size_t bufferSize)
+		{
+			assert(bufferSize > 0);
+			int count = recv(this->fd, buffer, bufferSize, 0);
+			if (count < 0)
+			{
+				this->errorReactor(this->fd);
+				return false;
+			}
+			return true;
+		}
+
+		inline bool Write(char *buffer, size_t bufferSize)
+		{
+			assert(bufferSize > 0);
+			int count = send(this->fd, buffer, bufferSize, 0);
+			if (count <= 0)
+			{
+				this->errorReactor(this->fd);
+				return false;
+			}
+			return true;
+		}
 
 	protected:
-		std::map<MsgEnum, Callback> callbackMap;
+		SOCKET fd;
+		SocketErrorReactor &errorReactor;
 	};
 
-	class Message
+	/**
+	 * @brief MessageBufferWrapper could be assign to any reference of any type
+	 */
+	template <typename BufferType, class SocketReadWriter, int headerSize = headerSize>
+	class MessageBufferWrapper
 	{
 	public:
-		Message() { ASSERT("a message should not construct", false); }
-		virtual ~Message() { ASSERT("a message should not destruct", false); }
-		virtual unsigned short GetSize() = 0;
-		virtual MsgEnum GetMsgEnum() = 0;
-	};
-
-	struct MsgNewNatRequest : public Message
-	{
-		unsigned short fd;
-		unsigned short GetSize() override { return sizeof(fd); }
-		MsgEnum GetMsgEnum() override { return MsgEnum::NEW_NAT_REQUEST; }
-	};
-
-	constexpr int dataTransferSize = bufferSize - headerSize - sizeof(unsigned short) * 2;
-	struct MsgDataTransfer : public Message
-	{
-		unsigned short fd;
-		unsigned short dataSize;
-		char data[dataTransferSize];
-		unsigned short GetSize() override { return sizeof(fd) + sizeof(dataSize) + dataSize; }
-		MsgEnum GetMsgEnum() override { return MsgEnum::DATA_TRANSFER; }
-		constexpr int GetMaxBufferSize() { return dataTransferSize; }
-	};
-
-	template <typename BufferType, typename HeaderType, int headerSize>
-	class MessageWriterBuffer
-	{
-	public:
-		MessageWriterBuffer(BufferType &buffer)
-		{
-			assert(sizeof(HeaderType) == headerSize);
-			this->buffer = buffer;
-		}
+		MessageBufferWrapper(BufferType &buffer, SocketReadWriter &socketReadWriter) : buffer(buffer),
+																					   socketReadWriter(socketReadWriter) {}
 
 		BufferType &operator()(SOCKET fd)
 		{
-			this->fd = fd;
+			this->socketReadWriter(fd);
 			return this->buffer;
 		}
 
-		bool Write()
+		inline bool Recv()
 		{
-			Message &msg = this->buffer.GetBuffer()[headerSize];
-			unsigned short totalSize = msg.GetSize() + headerSize;
-			this->buffer.SetHeader(HeaderType(totalSize << 16 | GetNumber(msg.GetMsgEnum())));
-			return send(this->fd, this->buffer.GetBuffer(), totalSize, 0) != SOCKET_ERROR;
+			return this->socketReadWriter.Read(this->buffer.GetBuffer(), this->buffer.GetBufferSize());
+		}
+
+		inline bool Send()
+		{
+			Message &message = this->buffer;
+			totalSize = message.GetSize() + headerSize;
+			assert(totalSize <= bufferSize);
+			buffer.SetHeader((Message::Header(totalSize << 16) | GetNumber(message.GetMsgEnum())));
+			return this->socketReadWriter.Write(this->buffer.GetBuffer(), totalSize);
 		}
 
 	protected:
 		BufferType &buffer;
-		SOCKET fd;
+		SocketReadWriter &socketReadWriter;
 	};
 
 	enum class DataId : unsigned short
@@ -166,6 +148,7 @@ namespace cppnat
 		PRIVATE_SOCKADDR,
 		BIND_MAP,
 		MESSAGE_WRITER,
+		SOCKET_READ_WRITER,
 
 		END,
 	};
@@ -229,13 +212,79 @@ namespace cppnat
 		LockerProxy<LockerInstance> proxy;
 	};
 
+	struct VersionInfo
+	{
+		unsigned short Version;
+		char Msg[15];
+	} versionInfo{
+		CppNatVersion,
+		"hello server"};
+
+	enum class MsgCode : unsigned short
+	{
+		FAILED = 0x00,
+		SUCCESS = 0x01,
+	};
+
+	enum class MsgEnum : unsigned short
+	{
+		ECHO = 0x0000,
+		ECHO_VERSION = 0x0001,
+
+		NEW_NAT_REQUEST = 0x0101,
+		NEW_NAT_RESULT = 0x0102,
+		DATA_TRANSFER = 0x0103,
+		SOCKET_CLOSED = 0x0104,
+	};
+
+	template <typename FnPtr>
+	class MessageHandler
+	{
+	public:
+		using Callback = FnPtr;
+		MessageHandler() {}
+
+		template <typename Fn>
+		void AddCallback(MsgEnum msg, Fn fn) { this->callbackMap.emplace(msg, reinterpret_cast<Callback>(fn)); }
+
+	protected:
+		std::map<MsgEnum, Callback> callbackMap;
+	};
+
+	class Message
+	{
+	public:
+		using Header = unsigned long;
+		Message() { ASSERT("a message should not construct", false); }
+		virtual ~Message() { ASSERT("a message should not destruct", false); }
+		virtual unsigned short GetSize() = 0;
+		virtual MsgEnum GetMsgEnum() = 0;
+	};
+
+	struct MsgNewNatRequest : public Message
+	{
+		unsigned short fd;
+		unsigned short GetSize() override { return sizeof(fd); }
+		MsgEnum GetMsgEnum() override { return MsgEnum::NEW_NAT_REQUEST; }
+	};
+
+	constexpr int dataTransferSize = bufferSize - headerSize - sizeof(unsigned short) * 2;
+	struct MsgDataTransfer : public Message
+	{
+		unsigned short fd;
+		unsigned short dataSize;
+		char data[dataTransferSize];
+		unsigned short GetSize() override { return sizeof(fd) + sizeof(dataSize) + dataSize; }
+		MsgEnum GetMsgEnum() override { return MsgEnum::DATA_TRANSFER; }
+		constexpr int GetMaxBufferSize() { return dataTransferSize; }
+	};
+
 	inline bool Send(SOCKET fd, const char *buffer, int size) { return send(fd, buffer, size, 0) != SOCKET_ERROR ? true : false; }
 	inline bool Send(SOCKET fd, MsgCode &code) { return send(fd, reinterpret_cast<char *>(&code), sizeof(code), 0) != SOCKET_ERROR ? true : false; }
 	inline bool Send(SOCKET fd, WriteBuffer &buffer, int size) { return send(fd, buffer.GetBuffer(), size, 0) != SOCKET_ERROR ? true : false; }
 
 	using DataManager = Locker<GetNumber(DataId::END)>;
 	using BindMap = std::map<SOCKET, SOCKET>;
-	using MessageWriter = MessageWriterBuffer<WriteBuffer, unsigned long, headerSize>;
 }
 
 #endif

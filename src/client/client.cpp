@@ -7,6 +7,25 @@ using namespace cppnat;
 
 #define CImpl Client::Impl
 
+class ClientExport
+{
+public:
+	class Reactor
+	{
+	public:
+		Reactor(Client::Impl &cImpl) : cImpl(cImpl) {}
+		void operator()(SOCKET fd) {}
+
+	protected:
+		Client::Impl &cImpl;
+	};
+
+	ClientExport(Client::Impl &cImpl) : reactor(cImpl) {}
+
+protected:
+	Reactor reactor;
+};
+
 class Client::Impl
 {
 public:
@@ -20,7 +39,9 @@ public:
 	inline void HandleServerMessage();
 
 	using any = void *;
-	using Callback = void (*)(any, SOCKET, DataManager &dataManager);
+	using Callback = void (*)(any, SOCKET fd, DataManager &);
+	using SocketReadWriter = SocketWrapper<ClientExport::Reactor>;
+	using MessageWriter = MessageBufferWrapper<WriteBuffer, SocketReadWriter>;
 
 protected:
 	void InitHandlers();
@@ -33,14 +54,19 @@ protected:
 	sockaddr_in dstAddr;
 	MessageHandler<Callback> handler;
 	fd_set fdSet;
+	ClientExport::Reactor clientReactor;
+	SocketReadWriter socketReadWriter;
 	WriteBuffer localBuffer;
 	WriteBuffer writeBuffer;
+	MessageWriter messageWriter;
 	DataManager dataManager;
 	BindMap bindMap;
-	MessageWriter messageWriter;
 };
 
-CImpl::Impl() : serverFd(INVALID_SOCKET), info(""), writeBuffer(), messageWriter(writeBuffer)
+CImpl::Impl() : serverFd(INVALID_SOCKET), info(""),
+				clientReactor(*this),
+				socketReadWriter(clientReactor),
+				messageWriter(writeBuffer, socketReadWriter)
 {
 #ifdef _WIN32
 	WSADATA wsaData;
@@ -72,18 +98,19 @@ void CImpl::SetServer(const char *addr, unsigned short port)
 
 void CImpl::InitHandlers()
 {
-	this->handler.AddCallback(MsgEnum::NEW_NAT_REQUEST, &FnNewNatRequest);
+	this->handler.AddCallback(MsgEnum::NEW_NAT_REQUEST, &CbNewNatRequest);
 }
 
 void CImpl::InitDataManager()
 {
 	this->dataManager.Put(DataId::CLIENT, this);
+	this->dataManager.Put(DataId::LOCAL_BUFFER, &this->localBuffer);
 	this->dataManager.Put(DataId::WRITE_BUFFER, &this->writeBuffer);
 	this->dataManager.Put(DataId::FD_SET, &this->fdSet);
 	this->dataManager.Put(DataId::PRIVATE_SOCKADDR, &this->dstAddr);
 	this->dataManager.Put(DataId::BIND_MAP, &this->bindMap);
 	this->dataManager.Put(DataId::MESSAGE_WRITER, &this->messageWriter);
-	this->dataManager.Put(DataId::LOCAL_BUFFER, &this->localBuffer);
+	this->dataManager.Put(DataId::SOCKET_READ_WRITER, &this->socketReadWriter);
 }
 
 bool CImpl::Start()

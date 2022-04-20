@@ -52,6 +52,7 @@
 		"unordered_map": "cpp",
 		"xhash": "cpp",
 		"xtree": "cpp",
-		"*.rh": "cpp"
+		"*.rh": "cpp",
+		"fstream": "cpp"
 	}
 }

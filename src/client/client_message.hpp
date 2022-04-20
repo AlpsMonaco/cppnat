@@ -5,22 +5,13 @@
 
 namespace cppnat
 {
-	void FnNewNatRequest(MsgNewNatRequest *newNatRequest, SOCKET serverFd, DataManager &dataManager)
+	void CbNewNatRequest(MsgNewNatRequest *newNatRequest, SOCKET fd, DataManager &dataManager)
 	{
-	}
+		SOCKET srcFd = newNatRequest->fd;
+		sockaddr_in &proxySockAddr = dataManager[DataId::PRIVATE_SOCKADDR];
 
-	void FnRemoteSocketDisconnect()
-	{
+		SOCKET proxyFd = socket(AF_INET, SOCK_STREAM, 0);
 	}
-
-	void FnForwardLocalData()
-	{
-	}
-
-	void FnLocalSocketDisconnect()
-	{
-	}
-
 }
 
 #endif
