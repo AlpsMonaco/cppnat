@@ -23,38 +23,12 @@ void Println(Args... args)
 
 struct test
 {
-	short a;
-	short b;
-	short c;
-	~test() { Println("~test"); }
-	void print() { Println(a, b, c); }
+	char a[10];
+	char b[3];
 };
 
-#include "message.hpp"
-
-int main()
+int main(int argc, char *argv[])
 {
-	int i = 1;
-	short j = 2;
-	cppnat::DataManager dataManager;
-	dataManager.Put(cppnat::DataId::CLIENT, &i);
-	dataManager.Put(cppnat::DataId::SERVER, &j);
-
-	short &k = dataManager[cppnat::DataId::SERVER];
-	k = 3;
-
-	cppnat::Buffer<65535, 4> buffer;
-	buffer.SetHeader(long(0x04030201));
-	long long &value = buffer;
-	value = 0xFFFFFFFFFFFF;
-
-	const char *b = buffer.GetBuffer();
-	for (int i = 0; i < 32; i++)
-		Println(int(b[i]));
-	test &testRef = buffer;
-	testRef.print();
-
-	cppnat::MsgNewNatRequest *newNatRequest = new cppnat::MsgNewNatRequest();
-	delete newNatRequest;
-	Println("endl");
+	Println(sizeof(test));
+	return 0;
 }

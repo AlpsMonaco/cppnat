@@ -21,123 +21,6 @@ namespace cppnat
 	template <typename T>
 	inline constexpr unsigned short GetNumber(T t) { return static_cast<const unsigned short>(t); }
 
-	template <int bufferSize, int headerSize = headerSize>
-	class Buffer
-	{
-	public:
-		Buffer()
-		{
-			memset(buffer, 0, bufferSize);
-			this->data = buffer + headerSize;
-			this->header = buffer;
-		}
-
-		template <typename T>
-		void SetHeader(T t)
-		{
-			assert(sizeof(T) == headerSize);
-			*reinterpret_cast<T *>(&(header)[0]) = t;
-		}
-
-		template <typename T>
-		void SetData(T t) { *reinterpret_cast<T *>(&(data)[0]) = t; }
-
-		template <typename T>
-		T &Get() { return *reinterpret_cast<T *>(&(data)[0]); }
-
-		template <typename T>
-		operator T &() { return *reinterpret_cast<T *>(&(data)[0]); }
-
-		template <typename T>
-		operator T() = delete;
-
-		char *GetBuffer() { return buffer; }
-		const char *GetBuffer() const { return buffer; }
-
-	protected:
-		char buffer[bufferSize];
-		char *data;
-		char *header;
-	};
-
-	using WriteBuffer = Buffer<bufferSize, headerSize>;
-
-	template <class SocketErrorReactor>
-	class SocketWrapper
-	{
-	public:
-		using InstanceType = SocketWrapper<SocketErrorReactor>;
-		SocketWrapper(SocketErrorReactor &errorReactor) : errorReactor(errorReactor) {}
-		InstanceType &operator()(SOCKET fd)
-		{
-			this->fd = fd;
-			return *this;
-		}
-
-		inline bool Read(char *buffer, size_t bufferSize)
-		{
-			assert(bufferSize > 0);
-			int count = recv(this->fd, buffer, bufferSize, 0);
-			if (count < 0)
-			{
-				this->errorReactor(this->fd);
-				return false;
-			}
-			return true;
-		}
-
-		inline bool Write(char *buffer, size_t bufferSize)
-		{
-			assert(bufferSize > 0);
-			int count = send(this->fd, buffer, bufferSize, 0);
-			if (count <= 0)
-			{
-				this->errorReactor(this->fd);
-				return false;
-			}
-			return true;
-		}
-
-	protected:
-		SOCKET fd;
-		SocketErrorReactor &errorReactor;
-	};
-
-	/**
-	 * @brief MessageBufferWrapper could be assign to any reference of any type
-	 */
-	template <typename BufferType, class SocketReadWriter, int headerSize = headerSize>
-	class MessageBufferWrapper
-	{
-	public:
-		MessageBufferWrapper(BufferType &buffer, SocketReadWriter &socketReadWriter) : buffer(buffer),
-																					   socketReadWriter(socketReadWriter) {}
-
-		BufferType &operator()(SOCKET fd)
-		{
-			this->socketReadWriter(fd);
-			return this->buffer;
-		}
-
-		inline bool Recv()
-		{
-			return this->socketReadWriter.Read(this->buffer.GetBuffer(), this->buffer.GetBufferSize());
-		}
-
-		inline bool Send()
-		{
-			Message &message = this->buffer;
-			totalSize = message.GetSize() + headerSize;
-			assert(totalSize <= bufferSize);
-			buffer.SetHeader((Message::Header(totalSize << 16) | GetNumber(message.GetMsgEnum())));
-			return this->socketReadWriter.Write(this->buffer.GetBuffer(), totalSize);
-		}
-
-	protected:
-		BufferType &buffer;
-		SocketReadWriter &socketReadWriter;
-	};
-
 	enum class DataId : unsigned short
 	{
 		CLIENT = 0x0000,
@@ -278,10 +161,6 @@ namespace cppnat
 		MsgEnum GetMsgEnum() override { return MsgEnum::DATA_TRANSFER; }
 		constexpr int GetMaxBufferSize() { return dataTransferSize; }
 	};
-
-	inline bool Send(SOCKET fd, const char *buffer, int size) { return send(fd, buffer, size, 0) != SOCKET_ERROR ? true : false; }
-	inline bool Send(SOCKET fd, MsgCode &code) { return send(fd, reinterpret_cast<char *>(&code), sizeof(code), 0) != SOCKET_ERROR ? true : false; }
-	inline bool Send(SOCKET fd, WriteBuffer &buffer, int size) { return send(fd, buffer.GetBuffer(), size, 0) != SOCKET_ERROR ? true : false; }
 
 	using DataManager = Locker<GetNumber(DataId::END)>;
 	using BindMap = std::map<SOCKET, SOCKET>;
