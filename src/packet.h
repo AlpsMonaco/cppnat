@@ -1,12 +1,16 @@
+#ifndef __PACKET_H__
+#define __PACKET_H__
+
 #include "util.hpp"
 
 namespace cppnat
 {
-	template <int packetSize, int headerSize>
+	template <typename SizeType, typename CmdType, int packetSize = 65535>
 	struct PacketWrapper
 	{
-		char header[headerSize];
-		char data[packetSize - headerSize];
+		SizeType size;
+		CmdType cmd;
+		char data[packetSize - sizeof(SizeType) - sizeof(CmdType)];
 
 		struct Proxy
 		{
@@ -24,12 +28,10 @@ namespace cppnat
 			char *p;
 		};
 
-		using PacketInstance = PacketWrapper<packetSize, headerSize>;
-
-		Proxy Header() { return Proxy(header); }
-		Proxy Data() { return Proxy(data); }
-
-		int GetPacketSize() { return packetSize; }
-		int GetHeaderSize() { return headerSize; }
+		SizeType &Size() { return size; }
+		CmdType &Cmd() { return cmd; }
+		Proxy Data() { return Proxy(&(data)[0]); }
 	};
 }
+
+#endif
