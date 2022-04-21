@@ -8,7 +8,7 @@
 #endif
 
 #include <map>
-#include "util.hpp"
+#include "util.h"
 #include "packet.h"
 
 namespace cppnat

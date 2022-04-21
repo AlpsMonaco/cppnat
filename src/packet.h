@@ -1,7 +1,7 @@
 #ifndef __PACKET_H__
 #define __PACKET_H__
 
-#include "util.hpp"
+#include "util.h"
 
 namespace cppnat
 {
@@ -20,8 +20,8 @@ namespace cppnat
 	template <typename Protocol>
 	struct PacketWrapper
 	{
-		typename Protocol::Size size;
-		typename Protocol::Cmd cmd;
+		typename Protocol::SizeType size;
+		typename Protocol::CmdType cmd;
 		char data[Protocol::PacketSize - Protocol::SizeLength - Protocol::CmdLength];
 
 		struct Proxy

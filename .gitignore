@@ -30,4 +30,7 @@
 *.exe
 *.out
 *.app
-/src/*.pdb
+*.pdb
+
+
+*.ilk
