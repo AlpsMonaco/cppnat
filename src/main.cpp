@@ -26,6 +26,6 @@ int main()
 	int &riNew = lockerNew[0];
 	unsigned short &rjNew = lockerNew[1];
 	long long &rkNew = lockerNew[2];
-	Println(riNew, rjNew, rkNew);
 	// unsigned long long &rkNew = lockerNew[2];
+	Println(riNew, rjNew, rkNew);
 }
