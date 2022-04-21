@@ -17,10 +17,8 @@ public:
 	inline void SetForward(const char *forwardAddr, unsigned short forwardPort);
 	inline bool Start();
 	inline const char *Error();
-	inline void HandleServerMessage();
 
 	using any = void *;
-	using Callback = void (*)(any, SOCKET fd, DataManager &);
 
 protected:
 	void InitHandlers();
@@ -31,12 +29,12 @@ protected:
 	sockaddr_in serverSockAddr;
 	SOCKET serverFd;
 	sockaddr_in dstAddr;
-	MessageHandler<Callback> handler;
 	fd_set fdSet;
-	BindMap bindMap;
+	SocketReader reader;
+	Streamer streamer;
 };
 
-CImpl::Impl() : serverFd(INVALID_SOCKET), info("")
+CImpl::Impl() : serverFd(INVALID_SOCKET), info(""), streamer(reader)
 {
 #ifdef _WIN32
 	WSADATA wsaData;
@@ -74,73 +72,31 @@ void CImpl::InitDataManager()
 {
 }
 
+inline bool VerifyWithServer(SOCKET serverFd)
+{
+	int ret = send(serverFd, CSVerifyInfo, sizeof(CSVerifyInfo), 0);
+	if (ret == SOCKET_ERROR)
+		return false;
+}
+
 bool CImpl::Start()
 {
-	this->serverFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (this->serverFd == INVALID_SOCKET)
+	serverFd = socket(AF_INET, SOCK_STREAM, 0);
+	if (serverFd == INVALID_SOCKET)
 	{
-		this->SetErrorInfo("create server socket failed");
+		SetErrorInfo("create socket failed");
 		return false;
 	}
-	if (connect(this->serverFd, (sockaddr *)&this->serverSockAddr, sizeof(this->serverSockAddr)) == SOCKET_ERROR)
+	int ret = connect(serverFd, (sockaddr *)&serverSockAddr, sizeof(serverSockAddr));
+	if (ret == SOCKET_ERROR)
 	{
-		this->SetErrorInfo("connect to server failed");
+		SetErrorInfo("connect to server failed");
 		return false;
 	}
-
-	int count;
-	count = send(this->serverFd, (const char *)&versionInfo, sizeof(VersionInfo), 0);
-	if (count == SOCKET_ERROR)
+	if (!VerifyWithServer(serverFd))
 	{
-		this->SetErrorInfo("send version info failed");
+		SetErrorInfo("verify with server failed");
 		return false;
-	}
-	char buffer[bufferSize];
-	count = recv(this->serverFd, buffer, bufferSize, 0);
-	if (count == SOCKET_ERROR)
-	{
-		this->SetErrorInfo("recv version info failed");
-		return false;
-	}
-	unsigned short code = GetNumber(MsgCode::SUCCESS);
-	if (count < sizeof(code))
-	{
-		this->SetErrorInfo("recv version info size error");
-		return false;
-	}
-	if (code != *((unsigned short *)buffer))
-	{
-		this->SetErrorInfo("recv version info error");
-		return false;
-	}
-
-	this->InitHandlers();
-
-	FD_ZERO(&fdSet);
-	FD_SET(this->serverFd, &fdSet);
-	fd_set rlist;
-	timeval timeout{1, 0};
-
-	SOCKET maxSocket = serverFd;
-	constexpr int maxSocketNum = 128;
-	SOCKET socketList[maxSocketNum];
-	for (int i = 0; i < maxSocketNum; ++i)
-		socketList[i] = INVALID_SOCKET;
-	for (;;)
-	{
-		count = select(maxSocket + 1, &rlist, nullptr, nullptr, &timeout);
-		if (count == SOCKET_ERROR)
-		{
-			this->SetErrorInfo("select failed");
-			return false;
-		}
-		if (count == 0)
-			continue;
-		if (FD_ISSET(this->serverFd, &rlist))
-		{
-			count--;
-			this->HandleServerMessage();
-		}
 	}
 }
 

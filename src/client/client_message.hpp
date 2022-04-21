@@ -5,9 +5,7 @@
 
 namespace cppnat
 {
-	void CbNewNatRequest(MsgNewNatRequest *newNatRequest, SOCKET fd, DataManager &dataManager)
-	{
-	}
+
 }
 
 #endif

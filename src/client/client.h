@@ -14,7 +14,6 @@ namespace cppnat
 	class EXPORT Client
 	{
 	public:
-		friend class ClientExport;
 		Client(const char *serverAddr, unsigned short serverPort, const char *forwardAddr, unsigned short forwardPort);
 		void Close();
 		bool Start();

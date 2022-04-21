@@ -5,11 +5,11 @@
 
 namespace cppnat
 {
-	template <typename SizeType, typename CmdType, size_t packetSize>
+	template <typename Size, typename Cmd, size_t packetSize>
 	struct PacketProtocol
 	{
-		using Size = SizeType;
-		using Cmd = CmdType;
+		using SizeType = Size;
+		using CmdType = Cmd;
 		static constexpr size_t SizeLength = sizeof(SizeType);
 		static constexpr size_t CmdLength = sizeof(CmdType);
 		static constexpr size_t HeaderLength = SizeLength + CmdLength;
@@ -64,6 +64,7 @@ namespace cppnat
 		constexpr static Size ReaderError = -1;
 		constexpr static Size ReaderClose = 0;
 		virtual Size Read(char *buffer, size_t bufferSize) = 0;
+		virtual ~Reader() {}
 	};
 
 	template <typename Protocol>
@@ -78,6 +79,7 @@ namespace cppnat
 			Extra,
 		};
 
+		PacketStreamer() = delete;
 		PacketStreamer(Reader &reader) : reader(reader), readSize(0), extraIndex(0), extraSize(0) { memset(buffer, 0, Protocol::PacketSize); }
 		bool Next()
 		{
@@ -104,6 +106,8 @@ namespace cppnat
 					return true;
 			}
 		}
+
+		char *GetBuffer() { return buffer; }
 		inline PacketType &GetPacket() { return *reinterpret_cast<PacketType *>(&(buffer[0])); }
 
 	protected:

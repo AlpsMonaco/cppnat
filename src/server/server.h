@@ -3,11 +3,6 @@
 
 #include "server_message.hpp"
 
-#ifdef _WIN32
-#include <WinSock2.h>
-#else
-#endif
-
 namespace cppnat
 {
 	class Server
@@ -18,12 +13,11 @@ namespace cppnat
 		bool Listen();
 		bool Begin();
 		void Stop();
-		int Errno();
+		const char *Error();
 
 	protected:
-		sockaddr_in addr;
-		SOCKET fd;
-		bool stop;
+		class Impl;
+		std::unique_ptr<Impl> pImpl;
 	};
 }
 
