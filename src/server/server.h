@@ -1,16 +1,15 @@
 #ifndef __CPP_NAT_SERVER
 #define __CPP_NAT_SERVER
 
-#include "server_message.hpp"
+#include <memory>
 
 namespace cppnat
 {
 	class Server
 	{
 	public:
-		Server(const char *addr, int port);
+		Server(const char *listenAddr, int listenPort);
 		~Server();
-		bool Listen();
 		bool Begin();
 		void Stop();
 		const char *Error();
