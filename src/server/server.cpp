@@ -15,12 +15,12 @@ public:
 
 	bool BindAndListen();
 	void SetListenAddr(const char *listenAddr, int listenPort);
-	bool BeginCSThread();
-	bool BeginNatThread();
 	const char *Error();
 
 protected:
 	void SetErrorInfo(const std::string &info);
+	sockaddr_in clientSockAddr;
+	SOCKET clientSock;
 	sockaddr_in sockaddr;
 	SOCKET sock;
 	std::string error;
@@ -47,7 +47,7 @@ inline const char *Server::Error() { return pImpl->Error(); }
 
 /****************************************/
 
-SImpl::Impl() : sock(INVALID_SOCKET)
+SImpl::Impl() : sock(INVALID_SOCKET), clientSock(INVALID_SOCKET)
 {
 	WSADATA wsadata;
 	WSAStartup(MAKEWORD(2, 2), &wsadata);

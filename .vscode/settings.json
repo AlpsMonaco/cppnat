@@ -60,6 +60,16 @@
 		"forward_list": "cpp",
 		"optional": "cpp",
 		"sstream": "cpp",
-		"xlocmon": "cpp"
+		"xlocmon": "cpp",
+		"string_view": "cpp",
+		"charconv": "cpp",
+		"format": "cpp",
+		"iomanip": "cpp",
+		"locale": "cpp",
+		"stop_token": "cpp",
+		"thread": "cpp",
+		"xlocbuf": "cpp",
+		"xlocmes": "cpp",
+		"xloctime": "cpp"
 	}
 }
