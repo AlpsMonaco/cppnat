@@ -5,16 +5,76 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "debug",
+			"name": "debug - win",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/src/main.exe",
-			"args": [],
+			"program": "${workspaceFolder}/main.exe",
+			"args": ["60434","127.0.0.1","33123"],
 			"stopAtEntry": false,
-			"cwd": "${workspaceFolder}//src",
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"console": "externalTerminal"
+		},
+		{
+			"name": "build and debug - win",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/main.exe",
+			"args": ["60434","127.0.0.1","33123"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
 			"environment": [],
 			"console": "externalTerminal",
-			"preLaunchTask": "build main"
+			"preLaunchTask": "build - win"
+		},
+		{
+			"name": "debug - linux",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/main",
+			"args": ["60434","127.0.0.1","33123"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "为 gdb 启用整齐打印",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				},
+				{
+					"description": "将反汇编风格设置为 Intel",
+					"text": "-gdb-set disassembly-flavor intel",
+					"ignoreFailures": true
+				}
+			]
+		},
+		{
+			"name": "build and debug - linux",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/main",
+			"args": ["60434","127.0.0.1","33123"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "为 gdb 启用整齐打印",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				},
+				{
+					"description": "将反汇编风格设置为 Intel",
+					"text": "-gdb-set disassembly-flavor intel",
+					"ignoreFailures": true
+				}
+			],
+			"preLaunchTask": "build - linux",
 		}
 	]
 }

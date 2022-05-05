@@ -2,25 +2,81 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "build main",
+            "label": "release - win",
+            "command": "cl.exe",
+            "args": [
+                "/EHsc",
+                "/nologo",
+                "/D_WIN32_WINNT=0x0601",
+                "/DNDEBUG",
+                "/Ox",
+                "/Fe:",
+                "${workspaceFolder}\\forward.exe",
+                "${workspaceFolder}\\main.cpp"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "调试器生成的任务。"
+        },
+        {
+            "type": "cppbuild",
+            "label": "build - win",
             "command": "cl.exe",
             "args": [
                 "/Zi",
                 "/EHsc",
                 "/nologo",
                 "/Fe:",
-                "${workspaceFolder}\\src\\main.exe",
-                "${workspaceFolder}\\src\\main.cpp"
+                "${workspaceFolder}\\main.exe",
+                "${workspaceFolder}\\main.cpp"
             ],
             "options": {
-                "cwd": "${workspaceFolder}\\src",
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$msCompile"
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "detail": "调试器生成的任务。"
-        }
+        },
+        {
+			"type": "cppbuild",
+			"label": "build - linux",
+			"command": "/usr/bin/g++",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-I",
+				"/mnt/g/repository/boost",
+				"-L",
+				"/mnt/g/repository/boost/stage/lib/",
+				"-l",
+				"boost_filesystem",
+				"-g",
+				"${workspaceFolder}/main.cpp",
+				"-o",
+				"${workspaceFolder}/main",
+				"-pthread"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "编译器: /usr/bin/g++",
+		}
     ],
     "version": "2.0.0"
 }

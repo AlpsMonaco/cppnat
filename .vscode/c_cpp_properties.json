@@ -1,9 +1,22 @@
 {
     "configurations": [
         {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/mnt/g/repository/boost"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64"
+        },
+        {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "G:\\repository\\boost"
             ],
             "defines": [
                 "_DEBUG",
