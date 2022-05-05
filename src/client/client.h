@@ -21,7 +21,7 @@ namespace cppnat
 
 	protected:
 		class Impl;
-		std::unique_ptr<Impl> pImpl;
+		std::unique_ptr<Impl> pImpl_;
 	};
 }
 

@@ -1,6 +1,7 @@
 #ifndef __CPP_NAT_SERVER
 #define __CPP_NAT_SERVER
 
+#include <string>
 #include <memory>
 
 namespace cppnat
@@ -8,15 +9,16 @@ namespace cppnat
 	class Server
 	{
 	public:
-		Server(const char *listenAddr, int listenPort);
+		Server(const char *listenAddr, unsigned short listenPort);
 		~Server();
-		bool Begin();
+		bool Start();
 		void Stop();
-		const char *Error();
+		std::string Error();
+		int Errno();
 
 	protected:
 		class Impl;
-		std::unique_ptr<Impl> pImpl;
+		std::unique_ptr<Impl> pImpl_;
 	};
 }
 
