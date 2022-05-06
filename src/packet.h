@@ -1,7 +1,10 @@
 #ifndef __PACKET_H__
 #define __PACKET_H__
 
+#include <map>
+#include <functional>
 #include "util.h"
+#include "buffer.h"
 
 namespace cppnat
 {
@@ -26,33 +29,39 @@ namespace cppnat
 
 		struct Proxy
 		{
-			Proxy(char *p) { this->p = p; }
+			Proxy(const char *p) { this->p = p; }
 
 			template <typename T>
-			operator T &() { return *reinterpret_cast<T *>(p); }
+			operator const T &() { return *reinterpret_cast<const T *>(p); }
+
+			template <typename T>
+			operator T &() = delete;
 
 			template <typename T>
 			operator T() = delete;
 
+			template <typename T>
+			operator const T() = delete;
+
 			Proxy(const Proxy &proxy) { this->p = proxy.p; }
 
 		protected:
-			char *p;
+			const char *p;
 		};
 
 		using PacketInstance = PacketWrapper<Protocol>;
-		static PacketInstance &ToPacket(char *buffer, size_t bufferSize)
+		static inline const PacketInstance &ToPacket(const char *buffer,
+													 size_t bufferSize)
 		{
 			assert(bufferSize >= Protocol::PacketSize);
-			return *reinterpret_cast<PacketInstance *>(buffer);
+			return *reinterpret_cast<const PacketInstance *>(buffer);
 		}
 
 		PacketInstance() = delete;
 		PacketInstance(const PacketInstance &packet) = delete;
 		PacketInstance &operator=(const PacketInstance &packet) = delete;
 
-		inline char operator[](size_t index) { return reinterpret_cast<char *>(this)[index]; }
-		Proxy Data() { return Proxy(data); }
+		inline Proxy Data() { return Proxy(data); }
 	};
 
 	/**
@@ -68,6 +77,96 @@ namespace cppnat
 	};
 
 	template <typename Protocol>
+	class BufferPacket
+	{
+	public:
+		using BufferType = Buffer<Protocol::PacketSize>;
+		using PacketType = PacketWrapper<Protocol>;
+
+		BufferPacket() : buffer_(),
+						 readSize_(0),
+						 extraOffset_(0) {}
+
+		inline char *GetNextBuffer()
+		{
+			if (extraOffset_ > 0)
+				MoveOldBuffer();
+			return buffer_.Get() + readSize_;
+		}
+
+		inline size_t GetNextSize()
+		{
+			if (extraOffset_ > 0)
+				MoveOldBuffer();
+			return Protocol::PacketSize - readSize_;
+		}
+
+		inline const char *Data()
+		{
+			return buffer_.Get();
+		}
+
+		inline const PacketType &Packet()
+		{
+			return PacketType::ToPacket(buffer_.Get(), Protocol::PacketSize);
+		}
+
+		bool Parse(size_t readSize)
+		{
+			readSize_ += readSize;
+			if (readSize_ < Protocol::HeaderLength)
+				return false;
+			const PacketType &packet = PacketType::ToPacket(buffer_.Get(), Protocol::PacketSize);
+			if (readSize_ < packet.size)
+				return false;
+			if (readSize_ == packet.size)
+				readSize_ = 0;
+			else
+				extraOffset_ = packet.size;
+			return true;
+		}
+		~BufferPacket() {}
+
+	protected:
+		void MoveOldBuffer()
+		{
+			memcpy(buffer_.Get(), buffer_.Get() + extraOffset_, readSize_ - extraOffset_);
+			readSize_ -= extraOffset_;
+			extraOffset_ = 0;
+		}
+
+		BufferType buffer_;
+		size_t readSize_;
+		size_t extraOffset_;
+	};
+
+	template <typename Protocol>
+	class PacketParser
+	{
+	public:
+		using PacketType = PacketWrapper<Protocol>;
+		enum class Status : unsigned short
+		{
+			Short,
+			Equal,
+			Extra,
+		};
+		static Status Parse(const char *buffer, size_t bytes)
+		{
+			if (bytes < Protocol::HeaderLength)
+				return Status::Short;
+			const PacketType &packet = PacketType::ToPacket(buffer_,
+															Protocol::PacketSize);
+			if (bytes < packet.size)
+				return Status::Short;
+			else if (bytes == packet.size)
+				return Status::Equal;
+			else
+				return Status::Extra;
+		}
+	};
+
+	template <typename Protocol>
 	class PacketStreamer
 	{
 	public:
@@ -80,26 +179,33 @@ namespace cppnat
 		};
 
 		PacketStreamer() = delete;
-		PacketStreamer(Reader &reader) : reader(reader), readSize(0), extraIndex(0), extraSize(0) { memset(buffer, 0, Protocol::PacketSize); }
+		PacketStreamer(Reader &reader) : reader_(reader),
+										 readSize_(0),
+										 extraIndex_(0),
+										 extraSize_(0)
+		{
+			memset(buffer_, 0, Protocol::PacketSize);
+		}
 		bool Next()
 		{
-			if (extraSize > 0)
+			if (extraSize_ > 0)
 			{
-				assert(extraIndex > 0);
-				memcpy(buffer, buffer + extraIndex, extraSize);
-				readSize = extraSize;
-				extraSize = 0;
-				extraIndex = 0;
-				if (Parse(buffer) != Status::Short)
+				assert(extraIndex_ > 0);
+				memcpy(buffer_, buffer_ + extraIndex_, extraSize_);
+				readSize_ = extraSize_;
+				extraSize_ = 0;
+				extraIndex_ = 0;
+				if (ParseBuffer() != Status::Short)
 					return true;
 			}
 			for (;;)
 			{
-				Reader::Size size = reader.Read(buffer + readSize, Protocol::PacketSize - readSize);
+				Reader::Size size = reader_.Read(buffer_ + readSize_,
+												 Protocol::PacketSize - readSize_);
 				if (size <= Reader::ReaderClose)
 					return false;
-				readSize += size;
-				Status status = Parse(buffer);
+				readSize_ += size;
+				Status status = ParseBuffer();
 				if (status == Status::Short)
 					continue;
 				else
@@ -107,39 +213,57 @@ namespace cppnat
 			}
 		}
 
-		char *GetBuffer() { return buffer; }
-		inline PacketType &GetPacket() { return *reinterpret_cast<PacketType *>(&(buffer[0])); }
+		char *GetBuffer() { return buffer_; }
+		inline PacketType &GetPacket() { return *reinterpret_cast<PacketType *>(&(buffer_[0])); }
 
 	protected:
-		inline Status Parse(char *buffer)
+		inline Status ParseBuffer()
 		{
-			if (readSize < Protocol::HeaderLength)
+			if (readSize_ < Protocol::HeaderLength)
 				return Status::Short;
-			PacketType &packet = PacketType::ToPacket(buffer, Protocol::PacketSize);
-			if (readSize < packet.size)
+			const PacketType &packet = PacketType::ToPacket(buffer_,
+															Protocol::PacketSize);
+			if (readSize_ < packet.size)
 			{
 				return Status::Short;
 			}
-			else if (packet.size == readSize)
+			else if (packet.size == readSize_)
 			{
-				extraSize = 0;
-				extraIndex = 0;
-				readSize = 0;
+				extraSize_ = 0;
+				extraIndex_ = 0;
+				readSize_ = 0;
 				return Status::Equal;
 			}
 			else
 			{
-				extraSize = readSize - packet.size;
-				extraIndex = packet.size;
+				extraSize_ = readSize_ - packet.size;
+				extraIndex_ = packet.size;
 				return Status::Extra;
 			}
 		}
 
-		char buffer[Protocol::PacketSize];
-		Reader &reader;
-		size_t readSize;
-		size_t extraIndex;
-		size_t extraSize;
+		char buffer_[Protocol::PacketSize];
+		Reader &reader_;
+		size_t readSize_;
+		size_t extraIndex_;
+		size_t extraSize_;
+	};
+
+	template <typename Protocol>
+	class PacketHandler
+	{
+	public:
+		using PacketType = PacketWrapper<Protocol>;
+		using Callback = std::function<void(const PacketType &)>;
+		PacketHandler() {}
+
+		inline void AddCallback(const Callback &callback)
+		{
+			callbacks_.emplace_back(callback);
+		}
+
+	protected:
+		std::map<Protocol::CmdType, Callback> handlers_;
 	};
 }
 

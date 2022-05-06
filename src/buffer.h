@@ -10,7 +10,7 @@ namespace cppnat
 		Buffer() {}
 		~Buffer() {}
 
-		char *Get() { return buffer_; }
+		inline char *Get() { return data_; }
 		inline const size_t BufferSize() { return bufferSize; }
 
 	protected:

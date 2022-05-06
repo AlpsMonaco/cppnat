@@ -16,23 +16,24 @@ using BoostErrorCode = boost::system::error_code;
 class Server::Impl
 {
 public:
+	using Conn = std::shared_ptr<asio::ip::tcp::socket>;
+
 	SImpl::Impl(const char *listenAddr,
 				unsigned short listenPort) : ios_(),
-											 acceptor_(
-												 ios_,
-												 tcp::endpoint(
-													 address::from_string(listenAddr),
-													 listenPort)),
-											 client_(ios_),
-											 csBufferPtr_(asio::buffer(csBuffer_.Get(), csBuffer_.BufferSize()))
+											 acceptor_(ios_, tcp::endpoint(address::from_string(listenAddr), listenPort)),
+											 client_(ios_)
 	{
 	}
 	SImpl::~Impl() {}
 
 	bool Start()
 	{
-		if (!WaitForClient())
-			return false;
+		for (;;)
+		{
+			if (!WaitForClient())
+				return false;
+			BeginProxy();
+		}
 	}
 
 	inline std::string Error() { return ec_.message(); }
@@ -43,19 +44,20 @@ protected:
 	asio::ip::tcp::acceptor acceptor_;
 	asio::ip::tcp::socket client_;
 	BoostErrorCode ec_;
-
-	Buffer<kBufferSize> csBuffer_;
-	asio::mutable_buffer csBufferPtr_;
+	ProtocolBuffer protocolBuffer_;
 
 	bool WaitForClient()
 	{
+		static constexpr size_t tempBufferSize = 64;
+		char tempBuffer[tempBufferSize];
+		asio::mutable_buffer tempBufferPtr = asio::buffer(tempBuffer, tempBufferSize);
 		size_t readNum = 0;
 		for (;;)
 		{
 			client_ = acceptor_.accept(ec_);
 			if (ec_)
 				return false;
-			readNum = client_.read_some(csBufferPtr_, ec_);
+			readNum = client_.read_some(tempBufferPtr, ec_);
 			if (ec_)
 			{
 				client_.close();
@@ -66,23 +68,51 @@ protected:
 				client_.close();
 				continue;
 			}
-			if (std::string_view(csBuffer_.Get(), readNum) != kCSVerifyInfoView)
+			if (!Handshake::IsMatch<Handshake::VerifyClient>(tempBuffer, readNum))
 			{
 				client_.close();
 				continue;
 			}
 			else
 			{
+				client_.write_some(asio::buffer(Handshake::ResponseOK::data,
+												Handshake::ResponseOK::dataView.size()),
+								   ec_);
 				return true;
 			}
 		}
 	}
+
+	void ClientHandler()
+	{
+		client_.async_read_some(asio::buffer(protocolBuffer_.GetNextBuffer(), protocolBuffer_.GetNextSize()),
+								[this](const BoostErrorCode &ec, size_t bytes) -> void
+								{
+									if (ec)
+									{
+										ec_ = ec;
+										ios_.stop();
+										return;
+									}
+									if (protocolBuffer_.Parse(bytes))
+									{
+									}
+									ClientHandler();
+								});
+	}
+
+	void BeginProxy()
+	{
+		ClientHandler();
+	}
 };
 
 inline Server::Server(const char *listenAddr,
-					  unsigned short listenPort) { pImpl_ =
-													   std::make_unique<Server::Impl>(listenAddr,
-																					  listenPort); }
+					  unsigned short listenPort)
+{
+	pImpl_ = std::make_unique<Server::Impl>(listenAddr,
+											listenPort);
+}
 
 Server::~Server() {}
 
