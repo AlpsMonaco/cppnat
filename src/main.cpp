@@ -54,16 +54,28 @@ void Call(unsigned short cmd, T t)
 	reinterpret_cast<void (*)(T)>(funcMap[cmd])(t);
 }
 
+#include "message.h"
+using namespace cppnat;
+
 int main(int argc, char **argv)
 {
-	funcMap[0] = PrintInt;
-	funcMap[1] = PrintDouble;
-	int i = 1;
-	double b = 2.033;
-	Call(0, i);
-	Call(1, b);
+	PacketWriter writer;
+	Packet packet = writer.Packet();
+	packet.size = 1;
+	packet.cmd = 2;
+	long long &val = packet.Data();
+	val = 0x01020304;
+	char *buffer = writer.Buffer();
+	for (size_t i = 0; i < 16; i++)
+	{
+		cout << size_t(buffer[i]) << " ";
+	}
 
-	const std::function<bool()> &f = [i]() -> bool
-	{ return true; };
-	f();
+	PacketReader reader;
+	buffer = reader.GetNextBuffer();
+	memcpy(buffer, writer.Buffer(), 128);
+	ConstPacket readerPacket = reader.Packet();
+	cout << readerPacket.size << " " << readerPacket.cmd << std::endl;
+	const long long &newVal = readerPacket.Data();
+	cout << newVal << std::endl;
 }

@@ -44,7 +44,7 @@ protected:
 	asio::ip::tcp::acceptor acceptor_;
 	asio::ip::tcp::socket client_;
 	BoostErrorCode ec_;
-	ProtocolBuffer protocolBuffer_;
+	PacketReader reader_;
 
 	bool WaitForClient()
 	{
@@ -85,7 +85,7 @@ protected:
 
 	void ClientHandler()
 	{
-		client_.async_read_some(asio::buffer(protocolBuffer_.GetNextBuffer(), protocolBuffer_.GetNextSize()),
+		client_.async_read_some(asio::buffer(reader_.GetNextBuffer(), reader_.GetNextSize()),
 								[this](const BoostErrorCode &ec, size_t bytes) -> void
 								{
 									if (ec)
@@ -94,9 +94,7 @@ protected:
 										ios_.stop();
 										return;
 									}
-									if (protocolBuffer_.Parse(bytes))
-									{
-									}
+									reader_.ReadBytes(bytes);
 									ClientHandler();
 								});
 	}

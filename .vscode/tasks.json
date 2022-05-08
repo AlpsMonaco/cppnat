@@ -6,13 +6,14 @@
             "command": "cl.exe",
             "args": [
                 "/EHsc",
+                "/std:c++17",
                 "/nologo",
                 "/D_WIN32_WINNT=0x0601",
                 "/DNDEBUG",
                 "/Ox",
                 "/Fe:",
                 "${workspaceFolder}\\forward.exe",
-                "${workspaceFolder}\\main.cpp"
+                "${workspaceFolder}\\src\\main.cpp"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -33,10 +34,11 @@
             "args": [
                 "/Zi",
                 "/EHsc",
+                "/std:c++17",
                 "/nologo",
                 "/Fe:",
                 "${workspaceFolder}\\main.exe",
-                "${workspaceFolder}\\main.cpp"
+                "${workspaceFolder}\\src\\main.cpp"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -63,7 +65,7 @@
 				"-l",
 				"boost_filesystem",
 				"-g",
-				"${workspaceFolder}/main.cpp",
+				"${workspaceFolder}/src/main.cpp",
 				"-o",
 				"${workspaceFolder}/main",
 				"-pthread"

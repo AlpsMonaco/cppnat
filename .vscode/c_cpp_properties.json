@@ -4,19 +4,19 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/mnt/g/repository/boost"
+                "${workspaceFolder}\\thirdparty\\boost"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",
-            "cppStandard": "c++14",
+            "cppStandard": "c++17",
             "intelliSenseMode": "linux-clang-x64"
         },
         {
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "G:\\repository\\boost"
+                "${workspaceFolder}\\thirdparty\\boost"
             ],
             "defines": [
                 "_DEBUG",

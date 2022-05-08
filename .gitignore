@@ -34,3 +34,5 @@
 
 
 *.ilk
+
+thirdparty/boost

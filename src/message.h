@@ -10,7 +10,10 @@ namespace cppnat
 {
 	constexpr size_t kBufferSize = 65535;
 	using Protocol = PacketProtocol<uint16_t, uint16_t, kBufferSize>;
-	using ProtocolBuffer = BufferPacket<Protocol>;
+	using PacketReader = PacketReadBuffer<Protocol>;
+	using PacketWriter = PacketWriteBuffer<Protocol>;
+	using Packet = typename PacketWriter::PacketType &;
+	using ConstPacket = const typename PacketReader::PacketType &;
 
 	class Handshake
 	{

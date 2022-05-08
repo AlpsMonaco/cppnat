@@ -29,24 +29,24 @@ namespace cppnat
 
 		struct Proxy
 		{
-			Proxy(const char *p) { this->p = p; }
+			Proxy(char *p) { this->p = p; }
 
 			template <typename T>
-			operator const T &() { return *reinterpret_cast<const T *>(p); }
+			operator const T &() const { return *reinterpret_cast<const T *>(p); }
 
 			template <typename T>
-			operator T &() = delete;
+			operator const T() const = delete;
+
+			template <typename T>
+			operator T &() { return *reinterpret_cast<T *>(p); }
 
 			template <typename T>
 			operator T() = delete;
 
-			template <typename T>
-			operator const T() = delete;
-
 			Proxy(const Proxy &proxy) { this->p = proxy.p; }
 
 		protected:
-			const char *p;
+			char *p;
 		};
 
 		using PacketInstance = PacketWrapper<Protocol>;
@@ -62,30 +62,78 @@ namespace cppnat
 		PacketInstance &operator=(const PacketInstance &packet) = delete;
 
 		inline Proxy Data() { return Proxy(data); }
-	};
-
-	/**
-	 * return -1 where Read error
-	 */
-	struct Reader
-	{
-		using Size = long long;
-		constexpr static Size ReaderError = -1;
-		constexpr static Size ReaderClose = 0;
-		virtual Size Read(char *buffer, size_t bufferSize) = 0;
-		virtual ~Reader() {}
+		inline const Proxy Data() const { return Proxy(const_cast<char *>(data)); }
 	};
 
 	template <typename Protocol>
-	class BufferPacket
+	class PacketHandler
+	{
+	public:
+		using PacketType = PacketWrapper<Protocol>;
+		using Callback = std::function<void(const PacketType &)>;
+
+		PacketHandler() {}
+		~PacketHandler() {}
+
+		inline void Add(typename Protocol::CmdType cmd, const Callback &callback)
+		{
+			callbacks[cmd] = callback;
+		}
+
+		inline bool Handle(const PacketType &packet)
+		{
+			assert(callbacks.find(packet.cmd) != callbacks.end());
+			callbacks[packet.cmd](packet);
+		}
+
+	protected:
+		std::map<typename Protocol::CmdType, Callback> callbacks;
+	};
+
+	template <typename Protocol>
+	class PacketWriteBuffer
+	{
+	public:
+		using PacketType = PacketWrapper<Protocol>;
+		using BufferType = Buffer<Protocol::PacketSize>;
+
+		PacketWriteBuffer() : buffer_(),
+							  packet_(*reinterpret_cast<PacketType *>(buffer_.Get()))
+		{
+		}
+
+		inline PacketType &Packet()
+		{
+			return packet_;
+		}
+
+		inline char *Buffer()
+		{
+			return buffer_.Get();
+		}
+
+	protected:
+		BufferType buffer_;
+		PacketType &packet_;
+	};
+
+	template <typename Protocol>
+	class PacketReadBuffer
 	{
 	public:
 		using BufferType = Buffer<Protocol::PacketSize>;
-		using PacketType = PacketWrapper<Protocol>;
+		using PacketHandlerType = PacketHandler<Protocol>;
+		using PacketType = typename PacketHandlerType::PacketType;
 
-		BufferPacket() : buffer_(),
-						 readSize_(0),
-						 extraOffset_(0) {}
+		PacketReadBuffer() : buffer_(),
+							 readSize_(0),
+							 extraOffset_(0),
+							 handler_() {}
+
+		inline void AddCallback(const typename PacketHandlerType::Callback &callback)
+		{
+			handler_.Add(callback);
+		}
 
 		inline char *GetNextBuffer()
 		{
@@ -111,21 +159,22 @@ namespace cppnat
 			return PacketType::ToPacket(buffer_.Get(), Protocol::PacketSize);
 		}
 
-		bool Parse(size_t readSize)
+		void ReadBytes(size_t readSize)
 		{
 			readSize_ += readSize;
 			if (readSize_ < Protocol::HeaderLength)
-				return false;
+				return;
 			const PacketType &packet = PacketType::ToPacket(buffer_.Get(), Protocol::PacketSize);
 			if (readSize_ < packet.size)
-				return false;
+				return;
 			if (readSize_ == packet.size)
 				readSize_ = 0;
 			else
 				extraOffset_ = packet.size;
-			return true;
+			handler_.Handle(packet);
 		}
-		~BufferPacket() {}
+
+		~PacketReadBuffer() {}
 
 	protected:
 		void MoveOldBuffer()
@@ -138,132 +187,7 @@ namespace cppnat
 		BufferType buffer_;
 		size_t readSize_;
 		size_t extraOffset_;
-	};
-
-	template <typename Protocol>
-	class PacketParser
-	{
-	public:
-		using PacketType = PacketWrapper<Protocol>;
-		enum class Status : unsigned short
-		{
-			Short,
-			Equal,
-			Extra,
-		};
-		static Status Parse(const char *buffer, size_t bytes)
-		{
-			if (bytes < Protocol::HeaderLength)
-				return Status::Short;
-			const PacketType &packet = PacketType::ToPacket(buffer_,
-															Protocol::PacketSize);
-			if (bytes < packet.size)
-				return Status::Short;
-			else if (bytes == packet.size)
-				return Status::Equal;
-			else
-				return Status::Extra;
-		}
-	};
-
-	template <typename Protocol>
-	class PacketStreamer
-	{
-	public:
-		using PacketType = PacketWrapper<Protocol>;
-		enum class Status : unsigned short
-		{
-			Short,
-			Equal,
-			Extra,
-		};
-
-		PacketStreamer() = delete;
-		PacketStreamer(Reader &reader) : reader_(reader),
-										 readSize_(0),
-										 extraIndex_(0),
-										 extraSize_(0)
-		{
-			memset(buffer_, 0, Protocol::PacketSize);
-		}
-		bool Next()
-		{
-			if (extraSize_ > 0)
-			{
-				assert(extraIndex_ > 0);
-				memcpy(buffer_, buffer_ + extraIndex_, extraSize_);
-				readSize_ = extraSize_;
-				extraSize_ = 0;
-				extraIndex_ = 0;
-				if (ParseBuffer() != Status::Short)
-					return true;
-			}
-			for (;;)
-			{
-				Reader::Size size = reader_.Read(buffer_ + readSize_,
-												 Protocol::PacketSize - readSize_);
-				if (size <= Reader::ReaderClose)
-					return false;
-				readSize_ += size;
-				Status status = ParseBuffer();
-				if (status == Status::Short)
-					continue;
-				else
-					return true;
-			}
-		}
-
-		char *GetBuffer() { return buffer_; }
-		inline PacketType &GetPacket() { return *reinterpret_cast<PacketType *>(&(buffer_[0])); }
-
-	protected:
-		inline Status ParseBuffer()
-		{
-			if (readSize_ < Protocol::HeaderLength)
-				return Status::Short;
-			const PacketType &packet = PacketType::ToPacket(buffer_,
-															Protocol::PacketSize);
-			if (readSize_ < packet.size)
-			{
-				return Status::Short;
-			}
-			else if (packet.size == readSize_)
-			{
-				extraSize_ = 0;
-				extraIndex_ = 0;
-				readSize_ = 0;
-				return Status::Equal;
-			}
-			else
-			{
-				extraSize_ = readSize_ - packet.size;
-				extraIndex_ = packet.size;
-				return Status::Extra;
-			}
-		}
-
-		char buffer_[Protocol::PacketSize];
-		Reader &reader_;
-		size_t readSize_;
-		size_t extraIndex_;
-		size_t extraSize_;
-	};
-
-	template <typename Protocol>
-	class PacketHandler
-	{
-	public:
-		using PacketType = PacketWrapper<Protocol>;
-		using Callback = std::function<void(const PacketType &)>;
-		PacketHandler() {}
-
-		inline void AddCallback(const Callback &callback)
-		{
-			callbacks_.emplace_back(callback);
-		}
-
-	protected:
-		std::map<Protocol::CmdType, Callback> handlers_;
+		PacketHandlerType handler_;
 	};
 }
 
