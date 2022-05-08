@@ -54,12 +54,6 @@ namespace cppnat
 			static constexpr std::string_view dataView = data;
 			static constexpr size_t size = dataView.size();
 		};
-
-		struct ResponseFailed
-		{
-			static constexpr char data[] = "0";
-			static constexpr std::string_view dataView = data;
-		};
 	};
 }
 

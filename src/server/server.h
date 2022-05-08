@@ -3,7 +3,6 @@
 
 #include <string>
 #include <memory>
-#include "../message.h"
 
 namespace cppnat
 {
@@ -16,7 +15,6 @@ namespace cppnat
 		void Stop();
 		std::string Error();
 		int Errno();
-		void AddHandler(MessageCmd cmd, const PacketReader::PacketHandlerType::Callback &callback);
 
 	protected:
 		class Impl;

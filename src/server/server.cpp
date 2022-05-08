@@ -1,4 +1,5 @@
 #include "server.h"
+#include "../message.h"
 #include <string>
 #include <string_view>
 #include <boost/asio.hpp>
@@ -26,6 +27,7 @@ public:
 
 	bool Start()
 	{
+		InitHandler();
 		for (;;)
 		{
 			if (!WaitForClient())
@@ -33,11 +35,6 @@ public:
 			ClientMessageLoop();
 			ios_.run();
 		}
-	}
-
-	inline void AddHandler(typename Protocol::CmdType cmd, const PacketReader::PacketHandlerType::Callback &callback)
-	{
-		reader_.AddCallback(cmd, callback);
 	}
 
 	std::string Error() { return ec_.message(); }
@@ -49,6 +46,23 @@ protected:
 	asio::ip::tcp::socket client_;
 	BoostErrorCode ec_;
 	PacketReader reader_;
+
+	void InitHandler()
+	{
+		reader_.AddCallback(MessageCmd::CMD_ECHO,
+							[](ConstPacket packet) -> void {
+#ifndef __DISABLE_ECHO_OUTPUT__
+#else
+				StreamWriter sw;
+				sw << "--------CMD_ECHO--------" << std::endl
+				   << "cmd: " << unsigned long long(packet.Cmd()) << std::endl
+				   << "size: " << packet.Size() << std::endl
+				   << "data: " << packet.Data() << std::endl
+				   << "------CMD_ECHO_END------" << std::endl;
+				sw.Write();
+#endif
+							});
+	}
 
 	bool WaitForClient()
 	{
@@ -121,8 +135,3 @@ void Server::Stop()
 
 std::string Server::Error() { return pImpl_->Error(); }
 int Server::Errno() { return pImpl_->Errno(); }
-
-void Server::AddHandler(typename Protocol::CmdType cmd, const PacketReader::PacketHandlerType::Callback &callback)
-{
-	pImpl_->AddHandler(cmd, callback);
-}

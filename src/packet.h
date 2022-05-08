@@ -26,7 +26,11 @@ namespace cppnat
 		using PacketInstance = PacketWrapper<Protocol>;
 
 		size_t Size() { return const_cast<const PacketInstance *>(this)->Size(); }
-		void Size(size_t size) { size_ = Protocol::HeaderLength + size; }
+		void Size(size_t size)
+		{
+			assert(size_ <= Protocol::DataSize);
+			size_ = Protocol::HeaderLength + size;
+		}
 		void Cmd(typename Protocol::CmdType cmd) { cmd_ = cmd; }
 		typename Protocol::CmdType Cmd() { return const_cast<const PacketInstance *>(this)->Cmd(); }
 		char *Data() { return data_; }
@@ -190,7 +194,16 @@ namespace cppnat
 				readSize_ = 0;
 			else
 				extraOffset_ = packet.Size();
+#ifdef __PRINT_READER_BUFFER__
+			StreamWriter sw;
+			sw << "recv size:" << readSize_ << std::endl;
+			sw << "recv bytes: " << std::endl;
+			for (size_t i = 0; i < readSize_; i++)
+				sw << unsigned short(buffer_.Get()[i]) << " ";
+			sw << std::endl;
+			sw.Write();
 			handler_.Handle(packet);
+#endif
 			if (extraOffset_ > 0)
 				ParseExtraData();
 		}
@@ -207,6 +220,7 @@ namespace cppnat
 				if (remainSize < Protocol::HeaderLength)
 				{
 					memcpy(buffer_.Get(), buffer_.Get() + extraOffset_, remainSize);
+					readSize_ = remainSize;
 					extraOffset_ = 0;
 					return;
 				}
@@ -215,6 +229,7 @@ namespace cppnat
 				{
 					memcpy(buffer_.Get(), buffer_.Get() + extraOffset_, remainSize);
 					extraOffset_ = 0;
+					readSize_ = remainSize;
 					return;
 				}
 				if (remainSize == packet.Size())
@@ -224,6 +239,13 @@ namespace cppnat
 				}
 				else
 					extraOffset_ += packet.Size();
+#ifdef __PRINT_READER_BUFFER__
+				StreamWriter sw;
+				sw << "remainSize:" << remainSize << std::endl
+				   << "readSize_:" << readSize_ << std::endl
+				   << "extraOffset_:" << extraOffset_ << std::endl;
+				sw.Write();
+#endif
 				handler_.Handle(packet);
 			} while (extraOffset_ > 0);
 		}

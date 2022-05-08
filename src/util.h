@@ -16,6 +16,7 @@
 #ifndef __PRINT_MULTI_ARGS__
 #define __PRINT_MULTI_ARGS__
 #include <iostream>
+#include <sstream>
 
 template <typename T>
 inline void Print(T t) { std::cout << t; }
@@ -33,5 +34,22 @@ void Println(Args... args)
 	Print(args...);
 	std::cout << std::endl;
 }
+
+class StreamWriter : public std::stringstream
+{
+public:
+	StreamWriter() : std::stringstream() {}
+	~StreamWriter() {}
+
+	void Write()
+	{
+		std::cout << this->str();
+	}
+
+	void Reset()
+	{
+		this->str("");
+	}
+};
 
 #endif
