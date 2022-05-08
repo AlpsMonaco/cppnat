@@ -8,8 +8,13 @@
 
 namespace cppnat
 {
+	enum class MessageCmd : uint16_t
+	{
+		CMD_ECHO = 0x0100,
+	};
+
 	constexpr size_t kBufferSize = 65535;
-	using Protocol = PacketProtocol<uint16_t, uint16_t, kBufferSize>;
+	using Protocol = PacketProtocol<uint16_t, MessageCmd, kBufferSize>;
 	using PacketReader = PacketReadBuffer<Protocol>;
 	using PacketWriter = PacketWriteBuffer<Protocol>;
 	using Packet = typename PacketWriter::PacketType &;
@@ -40,12 +45,14 @@ namespace cppnat
 		{
 			static constexpr char data[] = "CPP_NAT_CS_VERIFY_INFO_V0.0.1";
 			static constexpr std::string_view dataView = data;
+			static constexpr size_t size = dataView.size();
 		};
 
 		struct ResponseOK
 		{
 			static constexpr char data[] = "1";
 			static constexpr std::string_view dataView = data;
+			static constexpr size_t size = dataView.size();
 		};
 
 		struct ResponseFailed

@@ -7,13 +7,16 @@
             "args": [
                 "/EHsc",
                 "/std:c++17",
+                "/I${workspaceRoot}/thirdparty/boost",
                 "/nologo",
                 "/D_WIN32_WINNT=0x0601",
                 "/DNDEBUG",
                 "/Ox",
                 "/Fe:",
-                "${workspaceFolder}\\forward.exe",
-                "${workspaceFolder}\\src\\main.cpp"
+                "${workspaceFolder}\\main.exe",
+                "${workspaceFolder}\\src\\main.cpp",
+                "${workspaceFolder}\\src\\server\\server.cpp",
+                "${workspaceFolder}\\src\\client\\client.cpp"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -35,10 +38,14 @@
                 "/Zi",
                 "/EHsc",
                 "/std:c++17",
+                "/D_WIN32_WINNT=0x0601",
+                "/I${workspaceRoot}/thirdparty/boost",
                 "/nologo",
                 "/Fe:",
                 "${workspaceFolder}\\main.exe",
-                "${workspaceFolder}\\src\\main.cpp"
+                "${workspaceFolder}\\src\\main.cpp",
+                "${workspaceFolder}\\src\\server\\server.cpp",
+                "${workspaceFolder}\\src\\client\\client.cpp"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -53,32 +60,32 @@
             "detail": "调试器生成的任务。"
         },
         {
-			"type": "cppbuild",
-			"label": "build - linux",
-			"command": "/usr/bin/g++",
-			"args": [
-				"-fdiagnostics-color=always",
-				"-I",
-				"/mnt/g/repository/boost",
-				"-L",
-				"/mnt/g/repository/boost/stage/lib/",
-				"-l",
-				"boost_filesystem",
-				"-g",
-				"${workspaceFolder}/src/main.cpp",
-				"-o",
-				"${workspaceFolder}/main",
-				"-pthread"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}"
-			},
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build",
-			"detail": "编译器: /usr/bin/g++",
-		}
+            "type": "cppbuild",
+            "label": "build - linux",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-I",
+                "/mnt/g/repository/boost",
+                "-L",
+                "/mnt/g/repository/boost/stage/lib/",
+                "-l",
+                "boost_filesystem",
+                "-g",
+                "${workspaceFolder}/src/main.cpp",
+                "-o",
+                "${workspaceFolder}/main",
+                "-pthread"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "编译器: /usr/bin/g++",
+        }
     ],
     "version": "2.0.0"
 }

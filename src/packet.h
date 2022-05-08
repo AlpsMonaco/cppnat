@@ -23,12 +23,31 @@ namespace cppnat
 	template <typename Protocol>
 	struct PacketWrapper
 	{
-		typename Protocol::SizeType size;
-		typename Protocol::CmdType cmd;
-		char data[Protocol::PacketSize - Protocol::SizeLength - Protocol::CmdLength];
+		using PacketInstance = PacketWrapper<Protocol>;
+
+		size_t Size() { return const_cast<const PacketInstance *>(this)->Size(); }
+		void Size(size_t size) { size_ = Protocol::HeaderLength + size; }
+		void Cmd(typename Protocol::CmdType cmd) { cmd_ = cmd; }
+		typename Protocol::CmdType Cmd() { return const_cast<const PacketInstance *>(this)->Cmd(); }
+		char *Data() { return data_; }
+		const char *Data() const { return data_; }
+
+		inline char *Buffer()
+		{
+			return reinterpret_cast<char *>(this);
+		}
+
+		inline const char *Buffer() const
+		{
+			return reinterpret_cast<const char *>(this);
+		}
+
+		size_t Size() const { return size_; }
+		typename Protocol::CmdType Cmd() const { return cmd_; }
 
 		struct Proxy
 		{
+
 			Proxy(char *p) { this->p = p; }
 
 			template <typename T>
@@ -49,7 +68,6 @@ namespace cppnat
 			char *p;
 		};
 
-		using PacketInstance = PacketWrapper<Protocol>;
 		static inline const PacketInstance &ToPacket(const char *buffer,
 													 size_t bufferSize)
 		{
@@ -61,8 +79,13 @@ namespace cppnat
 		PacketInstance(const PacketInstance &packet) = delete;
 		PacketInstance &operator=(const PacketInstance &packet) = delete;
 
-		inline Proxy Data() { return Proxy(data); }
-		inline const Proxy Data() const { return Proxy(const_cast<char *>(data)); }
+		inline Proxy To() { return Proxy(data_); }
+		inline const Proxy To() const { return Proxy(const_cast<char *>(data_)); }
+
+	private:
+		typename Protocol::SizeType size_;
+		typename Protocol::CmdType cmd_;
+		char data_[Protocol::PacketSize - Protocol::SizeLength - Protocol::CmdLength];
 	};
 
 	template <typename Protocol>
@@ -80,10 +103,10 @@ namespace cppnat
 			callbacks[cmd] = callback;
 		}
 
-		inline bool Handle(const PacketType &packet)
+		inline void Handle(const PacketType &packet)
 		{
-			assert(callbacks.find(packet.cmd) != callbacks.end());
-			callbacks[packet.cmd](packet);
+			assert(callbacks.find(packet.Cmd()) != callbacks.end());
+			callbacks[packet.Cmd()](packet);
 		}
 
 	protected:
@@ -130,22 +153,18 @@ namespace cppnat
 							 extraOffset_(0),
 							 handler_() {}
 
-		inline void AddCallback(const typename PacketHandlerType::Callback &callback)
+		inline void AddCallback(typename Protocol::CmdType cmd, const typename PacketHandlerType::Callback &callback)
 		{
-			handler_.Add(callback);
+			handler_.Add(cmd, callback);
 		}
 
 		inline char *GetNextBuffer()
 		{
-			if (extraOffset_ > 0)
-				MoveOldBuffer();
 			return buffer_.Get() + readSize_;
 		}
 
 		inline size_t GetNextSize()
 		{
-			if (extraOffset_ > 0)
-				MoveOldBuffer();
 			return Protocol::PacketSize - readSize_;
 		}
 
@@ -165,23 +184,48 @@ namespace cppnat
 			if (readSize_ < Protocol::HeaderLength)
 				return;
 			const PacketType &packet = PacketType::ToPacket(buffer_.Get(), Protocol::PacketSize);
-			if (readSize_ < packet.size)
+			if (readSize_ < packet.Size())
 				return;
-			if (readSize_ == packet.size)
+			if (readSize_ == packet.Size())
 				readSize_ = 0;
 			else
-				extraOffset_ = packet.size;
+				extraOffset_ = packet.Size();
 			handler_.Handle(packet);
+			if (extraOffset_ > 0)
+				ParseExtraData();
 		}
 
 		~PacketReadBuffer() {}
 
 	protected:
-		void MoveOldBuffer()
+		void ParseExtraData()
 		{
-			memcpy(buffer_.Get(), buffer_.Get() + extraOffset_, readSize_ - extraOffset_);
-			readSize_ -= extraOffset_;
-			extraOffset_ = 0;
+			static size_t remainSize = 0;
+			do
+			{
+				remainSize = readSize_ - extraOffset_;
+				if (remainSize < Protocol::HeaderLength)
+				{
+					memcpy(buffer_.Get(), buffer_.Get() + extraOffset_, remainSize);
+					extraOffset_ = 0;
+					return;
+				}
+				const PacketType &packet = PacketType::ToPacket(buffer_.Get() + extraOffset_, Protocol::PacketSize);
+				if (remainSize < packet.Size())
+				{
+					memcpy(buffer_.Get(), buffer_.Get() + extraOffset_, remainSize);
+					extraOffset_ = 0;
+					return;
+				}
+				if (remainSize == packet.Size())
+				{
+					readSize_ = 0;
+					extraOffset_ = 0;
+				}
+				else
+					extraOffset_ += packet.Size();
+				handler_.Handle(packet);
+			} while (extraOffset_ > 0);
 		}
 
 		BufferType buffer_;

@@ -2,22 +2,21 @@
 #define __CPP_NAT_CLIENT
 
 #include <memory>
-
-#ifdef _WIN32
-#define EXPORT __declspec(dllexport)
-#else
-#define EXPORT
-#endif
+#include <string>
 
 namespace cppnat
 {
-	class EXPORT Client
+	class Client
 	{
 	public:
-		Client(const char *serverAddr, unsigned short serverPort, const char *forwardAddr, unsigned short forwardPort);
+		Client(const char *serverAddr, unsigned short serverPort,
+			   const char *forwardAddr, unsigned short forwardPort);
+		~Client();
 		void Close();
 		bool Start();
 		const char *Error();
+		int Errno();
+		bool SendEchoMessage(const std::string &message);
 
 	protected:
 		class Impl;

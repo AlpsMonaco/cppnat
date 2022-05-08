@@ -2,8 +2,6 @@
 #include <string>
 #include <string_view>
 #include <boost/asio.hpp>
-#include "../buffer.h"
-#include "../message.h"
 
 using namespace cppnat;
 using namespace boost;
@@ -32,12 +30,18 @@ public:
 		{
 			if (!WaitForClient())
 				return false;
-			BeginProxy();
+			ClientMessageLoop();
+			ios_.run();
 		}
 	}
 
-	inline std::string Error() { return ec_.message(); }
-	inline int Errno() { return ec_.value(); }
+	inline void AddHandler(typename Protocol::CmdType cmd, const PacketReader::PacketHandlerType::Callback &callback)
+	{
+		reader_.AddCallback(cmd, callback);
+	}
+
+	std::string Error() { return ec_.message(); }
+	int Errno() { return ec_.value(); }
 
 protected:
 	asio::io_service ios_;
@@ -76,14 +80,14 @@ protected:
 			else
 			{
 				client_.write_some(asio::buffer(Handshake::ResponseOK::data,
-												Handshake::ResponseOK::dataView.size()),
+												Handshake::ResponseOK::size),
 								   ec_);
 				return true;
 			}
 		}
 	}
 
-	void ClientHandler()
+	void ClientMessageLoop()
 	{
 		client_.async_read_some(asio::buffer(reader_.GetNextBuffer(), reader_.GetNextSize()),
 								[this](const BoostErrorCode &ec, size_t bytes) -> void
@@ -95,18 +99,13 @@ protected:
 										return;
 									}
 									reader_.ReadBytes(bytes);
-									ClientHandler();
+									ClientMessageLoop();
 								});
-	}
-
-	void BeginProxy()
-	{
-		ClientHandler();
 	}
 };
 
-inline Server::Server(const char *listenAddr,
-					  unsigned short listenPort)
+Server::Server(const char *listenAddr,
+			   unsigned short listenPort)
 {
 	pImpl_ = std::make_unique<Server::Impl>(listenAddr,
 											listenPort);
@@ -114,11 +113,16 @@ inline Server::Server(const char *listenAddr,
 
 Server::~Server() {}
 
-inline bool Server::Start() { return pImpl_->Start(); }
+bool Server::Start() { return pImpl_->Start(); }
 
 void Server::Stop()
 {
 }
 
-inline std::string Server::Error() { return pImpl_->Error(); }
-inline int Server::Errno() { return pImpl_->Errno(); }
+std::string Server::Error() { return pImpl_->Error(); }
+int Server::Errno() { return pImpl_->Errno(); }
+
+void Server::AddHandler(typename Protocol::CmdType cmd, const PacketReader::PacketHandlerType::Callback &callback)
+{
+	pImpl_->AddHandler(cmd, callback);
+}
