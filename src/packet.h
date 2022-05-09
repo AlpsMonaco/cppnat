@@ -1,6 +1,8 @@
 #ifndef __PACKET_H__
 #define __PACKET_H__
 
+#define __PRINT_READER_BUFFER__
+
 #include <map>
 #include <functional>
 #include "util.h"
@@ -191,20 +193,20 @@ namespace cppnat
 			const PacketType &packet = PacketType::ToPacket(buffer_.Get(), Protocol::PacketSize);
 			if (readSize_ < packet.Size())
 				return;
-			if (readSize_ == packet.Size())
-				readSize_ = 0;
-			else
-				extraOffset_ = packet.Size();
 #ifdef __PRINT_READER_BUFFER__
 			StreamWriter sw;
 			sw << "recv size:" << readSize_ << std::endl;
 			sw << "recv bytes: " << std::endl;
 			for (size_t i = 0; i < readSize_; i++)
-				sw << unsigned short(buffer_.Get()[i]) << " ";
+				sw << (size_t)((unsigned char)(buffer_.Get()[i])) << " ";
 			sw << std::endl;
 			sw.Write();
 			handler_.Handle(packet);
 #endif
+			if (readSize_ == packet.Size())
+				readSize_ = 0;
+			else
+				extraOffset_ = packet.Size();
 			if (extraOffset_ > 0)
 				ParseExtraData();
 		}

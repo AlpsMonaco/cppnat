@@ -66,7 +66,7 @@ protected:
 	{
 		Packet &writePacket = writer_.Packet();
 		connHelper->conn->close();
-		writePacket.Cmd(MessageCmd::Cmd_ConnClosed);
+		writePacket.Cmd(MessageCmd::CMD_ConnClosed);
 		writePacket.Size(sizeof(Msg::ConnClosed));
 		Msg::ConnClosed &msg = writePacket.To();
 		msg.id = connHelper->id;
@@ -76,13 +76,22 @@ protected:
 	void HandleUserData(size_t id)
 	{
 		ConnHelper *connHelper = connManager_.Get(id);
-		Msg::DataTransfer &dt = Packet::ToPacket(connHelper->buffer, kBufferSize).To();
+		Packet &packet = Packet::ToPacket(connHelper->buffer, kBufferSize);
+		Msg::DataTransfer &dt = packet.To();
 		connHelper->conn->async_read_some(
 			asio::buffer(dt.data,
 						 Msg::DataTransfer::kDataTransferSize),
-			[this, &dt, connHelper](const boost::system::error_code &ec,
-									size_t bytes_transffered) -> void
+			[this, &dt, &packet, connHelper](const boost::system::error_code &ec,
+											 size_t bytes_transffered) -> void
 			{
+				std::cout << "server got " << bytes_transffered << std::endl;
+				StreamWriter sw;
+				for (size_t i = 0; i < bytes_transffered; i++)
+				{
+					sw << size_t(unsigned char(dt.data[i])) << " ";
+				}
+				sw << std::endl;
+				sw.Write();
 				if (ec)
 				{
 					HandleError(ec);
@@ -90,13 +99,11 @@ protected:
 				}
 				else
 				{
-					Packet &writePacket = writer_.Packet();
-					writePacket.Cmd(MessageCmd::Cmd_DataTransfer);
-					writePacket.Size(Msg::DataTransfer::kDataTransferHeaderSize + bytes_transffered);
-					Msg::DataTransfer &msg = writePacket.To();
-					msg.size = bytes_transffered;
-					msg.id = connHelper->id;
-					SendToClient(writer_.Packet());
+					packet.Cmd(MessageCmd::CMD_DataTransfer);
+					packet.Size(Msg::DataTransfer::kDataTransferHeaderSize + bytes_transffered);
+					dt.size = bytes_transffered;
+					dt.id = connHelper->id;
+					SendToClient(packet);
 					HandleUserData(connHelper->id);
 				}
 			});
@@ -124,14 +131,14 @@ protected:
 								const Msg::AcceptNewConn &msg = packet.To();
 								HandleUserData(msg.id);
 							});
-		reader_.AddCallback(MessageCmd::Cmd_RejectNewConn,
+		reader_.AddCallback(MessageCmd::CMD_RejectNewConn,
 							[this](ConstPacket &packet) -> void
 							{
 								const Msg::AcceptNewConn &msg = packet.To();
 								connManager_.Get(msg.id)->conn->close(ec_);
 							});
 
-		reader_.AddCallback(MessageCmd::Cmd_DataTransfer, [this](ConstPacket &packet) -> void
+		reader_.AddCallback(MessageCmd::CMD_DataTransfer, [this](ConstPacket &packet) -> void
 							{
 								const Msg::DataTransfer &msg = packet.To();
 								ConnHelper *connHelper = connManager_.Get(msg.id);
@@ -146,7 +153,7 @@ protected:
 													   }
 												   }
 								); });
-		reader_.AddCallback(MessageCmd::Cmd_ConnClosed, [this](ConstPacket &packet) -> void
+		reader_.AddCallback(MessageCmd::CMD_ConnClosed, [this](ConstPacket &packet) -> void
 							{
 								const Msg::ConnClosed &msg = packet.To();
 								connManager_.Get(msg.id)->conn->close(ec_);
@@ -212,6 +219,14 @@ protected:
 
 	void SendToClient(ConstPacket &packet)
 	{
+		StreamWriter sw;
+		sw << "to client:" << std::endl;
+		for (size_t i = 0; i < packet.Size(); i++)
+		{
+			sw << size_t(unsigned char(packet.Buffer()[i])) << " ";
+		}
+		sw << std::endl;
+		sw.Write();
 		asio::write(client_,
 					asio::buffer(packet.Buffer(), packet.Size()),
 					ec_);
@@ -246,6 +261,9 @@ protected:
 					ios_.stop();
 					return;
 				}
+				StreamWriter sw;
+				sw << "new connection: " << tempSocket.remote_endpoint() << std::endl;
+				sw.Write();
 				ConnHelper *helper =
 					connManager_.New(std::move(tempSocket));
 				if (helper == nullptr)

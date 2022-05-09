@@ -1,15 +1,34 @@
-#include <vector>
+#include "server/server.h"
+#include "client/client.h"
+#include <thread>
 #include <iostream>
 
-template <typename T, typename... Args>
-void TestAssign(T &t, Args &&...args)
-{
-	t = T(std::forward<Args>(args)...);
-}
+constexpr char *kAddress = "127.0.0.1";
+constexpr char *kTargetAddress = "192.168.1.202";
+constexpr unsigned short kListenPort = 8878;
+constexpr unsigned short kTargetPort = 33123;
 
+using namespace cppnat;
 int main(int argc, char **argv)
 {
-	int i;
-	TestAssign(i, 111);
-	std::cout << i << std::endl;
+	std::thread serverThread(
+		[]() -> void
+		{
+			Server server(kAddress, kListenPort);
+			if (!server.Start())
+			{
+				std::cout << server.Error() << std::endl;
+				return;
+			}
+		});
+
+	Client client(kAddress, kListenPort,
+				  kTargetAddress, kTargetPort);
+
+	if (!client.Start())
+	{
+		std::cout << client.Error() << std::endl;
+		return -1;
+	}
+	serverThread.join();
 }

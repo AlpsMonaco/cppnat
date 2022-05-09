@@ -44,6 +44,40 @@ namespace cppnat
             return nullptr;
         }
 
+        template <typename... Args>
+        ConnHelper *NewAt(size_t index, Args &&...args)
+        {
+            if (index < conns_.size())
+            {
+                if (conns_[index] == nullptr)
+                {
+                    conns_[index] = new ConnHelper(index);
+                    conns_[index]->conn = new Conn(std::forward<Args>(args)...);
+                    return conns_[index];
+                }
+                if (!conns_[index]->conn->is_open())
+                {
+                    *(conns_[index]->conn) = Conn(std::forward<Args>(args)...);
+                    return conns_[index];
+                }
+            }
+            return nullptr;
+        }
+
+        void Set(size_t id, Conn *conn)
+        {
+            if (conns_[id] != nullptr)
+            {
+                delete conns_[id]->conn;
+                conns_[id]->conn = conn;
+            }
+            else
+            {
+                conns_[id] = new ConnHelper(id);
+                conns_[id]->conn = conn;
+            }
+        }
+
         ConnHelper *Get(size_t id)
         {
             assert(id < conns_.size());

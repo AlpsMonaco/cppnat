@@ -14,9 +14,9 @@ namespace cppnat
 
 		CMD_RequestNewConn = 0x0201,
 		CMD_AcceptNewConn,
-		Cmd_RejectNewConn,
-		Cmd_DataTransfer,
-		Cmd_ConnClosed,
+		CMD_RejectNewConn,
+		CMD_DataTransfer,
+		CMD_ConnClosed,
 	};
 
 	constexpr size_t kBufferSize = 65535;
@@ -46,7 +46,7 @@ namespace cppnat
 
 		struct DataTransfer
 		{
-			static constexpr size_t kDataTransferHeaderSize = sizeof(size_t) - sizeof(size_t);
+			static constexpr size_t kDataTransferHeaderSize = sizeof(size_t) + sizeof(size_t);
 			static constexpr size_t kDataTransferSize = Protocol::BodySize - kDataTransferHeaderSize;
 			size_t id;
 			size_t size;
