@@ -15,6 +15,7 @@ namespace cppnat
             size_t id;
             Conn *conn;
             char buffer[kBufferSize];
+            char writeBuffer[kBufferSize];
             ConnHelper(size_t id) : id(id) {}
         };
 

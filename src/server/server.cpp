@@ -62,6 +62,17 @@ protected:
 
 	using ConnHelper = typename ConnManager<asio::ip::tcp::socket, kBufferSize>::ConnHelper;
 
+	void OnConnError(ConnHelper *connHelper)
+	{
+		Packet &writePacket = writer_.Packet();
+		connHelper->conn->close();
+		writePacket.Cmd(MessageCmd::Cmd_ConnClosed);
+		writePacket.Size(sizeof(Msg::ConnClosed));
+		Msg::ConnClosed &msg = writePacket.To();
+		msg.id = connHelper->id;
+		SendToClient(writer_.Packet());
+	}
+
 	void HandleUserData(size_t id)
 	{
 		ConnHelper *connHelper = connManager_.Get(id);
@@ -72,19 +83,14 @@ protected:
 			[this, &dt, connHelper](const boost::system::error_code &ec,
 									size_t bytes_transffered) -> void
 			{
-				Packet &writePacket = writer_.Packet();
 				if (ec)
 				{
 					HandleError(ec);
-					connHelper->conn->close();
-					writePacket.Cmd(MessageCmd::Cmd_ConnClosed);
-					writePacket.Size(sizeof(Msg::ConnClosed));
-					Msg::ConnClosed &msg = writePacket.To();
-					msg.id = connHelper->id;
-					SendToClient(writer_.Packet());
+					OnConnError(connHelper);
 				}
 				else
 				{
+					Packet &writePacket = writer_.Packet();
 					writePacket.Cmd(MessageCmd::Cmd_DataTransfer);
 					writePacket.Size(Msg::DataTransfer::kDataTransferHeaderSize + bytes_transffered);
 					Msg::DataTransfer &msg = writePacket.To();
@@ -129,20 +135,14 @@ protected:
 							{
 								const Msg::DataTransfer &msg = packet.To();
 								ConnHelper *connHelper = connManager_.Get(msg.id);
-								memcpy(connHelper->buffer, msg.data, msg.size);
+								memcpy(connHelper->writeBuffer, msg.data, msg.size);
 								asio::async_write(*connHelper->conn,
-												  asio::buffer(connHelper->buffer, msg.size),
+												  asio::buffer(connHelper->writeBuffer, msg.size),
 												  [this, connHelper](const boost::system::error_code &ec,
 												   size_t bytes_transffered) -> void {
 													   if(ec){
 														   HandleError(ec);
-														   connHelper->conn->close();
-														   Packet &writePacket = writer_.Packet();
-														   writePacket.Cmd(MessageCmd::Cmd_ConnClosed);
-														   writePacket.Size(sizeof(Msg::ConnClosed));
-														   Msg::ConnClosed &msg = writePacket.To();
-														   msg.id = connHelper->id;
-														   SendToClient(writer_.Packet());
+														   OnConnError(connHelper);
 													   }
 												   }
 								); });
@@ -225,7 +225,7 @@ protected:
 	void OnNewUserConnection(ConnHelper *helper)
 	{
 		Packet &packet = writer_.Packet();
-		packet.Cmd(MessageCmd::CMD_AcceptNewConn);
+		packet.Cmd(MessageCmd::CMD_RequestNewConn);
 		packet.Size(sizeof(Msg::NewConnAccept));
 		Msg::NewConnAccept &msg = packet.To();
 		msg.id = helper->id;
@@ -259,6 +259,7 @@ protected:
 	void BeginProxy()
 	{
 		ClientMessageLoop();
+		AcceptUserConnection();
 	}
 };
 

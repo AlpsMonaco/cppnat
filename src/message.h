@@ -12,7 +12,7 @@ namespace cppnat
 	{
 		CMD_Echo = 0x0100,
 
-		CMD_NewConnAccept = 0x0201,
+		CMD_RequestNewConn = 0x0201,
 		CMD_AcceptNewConn,
 		Cmd_RejectNewConn,
 		Cmd_DataTransfer,
