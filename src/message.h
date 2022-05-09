@@ -10,15 +10,54 @@ namespace cppnat
 {
 	enum class MessageCmd : uint16_t
 	{
-		CMD_ECHO = 0x0100,
+		CMD_Echo = 0x0100,
+
+		CMD_NewConnAccept = 0x0201,
+		CMD_AcceptNewConn,
+		Cmd_RejectNewConn,
+		Cmd_DataTransfer,
+		Cmd_ConnClosed,
 	};
 
 	constexpr size_t kBufferSize = 65535;
 	using Protocol = PacketProtocol<uint16_t, MessageCmd, kBufferSize>;
 	using PacketReader = PacketReadBuffer<Protocol>;
 	using PacketWriter = PacketWriteBuffer<Protocol>;
-	using Packet = typename PacketWriter::PacketType &;
-	using ConstPacket = const typename PacketReader::PacketType &;
+	using Packet = typename PacketWriter::PacketType;
+	using ConstPacket = const typename PacketReader::PacketType;
+
+	class Msg
+	{
+	public:
+		struct NewConnAccept
+		{
+			size_t id;
+		};
+
+		struct AcceptNewConn
+		{
+			size_t id;
+		};
+
+		struct RejectNewConn
+		{
+			size_t id;
+		};
+
+		struct DataTransfer
+		{
+			static constexpr size_t kDataTransferHeaderSize = sizeof(size_t) - sizeof(size_t);
+			static constexpr size_t kDataTransferSize = Protocol::BodySize - kDataTransferHeaderSize;
+			size_t id;
+			size_t size;
+			char data[kDataTransferSize];
+		};
+
+		struct ConnClosed
+		{
+			size_t id;
+		};
+	};
 
 	class Handshake
 	{

@@ -17,7 +17,7 @@ namespace cppnat
 		static constexpr size_t CmdLength = sizeof(CmdType);
 		static constexpr size_t HeaderLength = SizeLength + CmdLength;
 		static constexpr size_t PacketSize = packetSize;
-		static constexpr size_t DataSize = PacketSize - HeaderLength;
+		static constexpr size_t BodySize = PacketSize - HeaderLength;
 	};
 
 	template <typename Protocol>
@@ -25,26 +25,22 @@ namespace cppnat
 	{
 		using PacketInstance = PacketWrapper<Protocol>;
 
+		PacketInstance() = delete;
+		PacketInstance(const PacketInstance &packet) = delete;
+		PacketInstance &operator=(const PacketInstance &packet) = delete;
+
 		size_t Size() { return const_cast<const PacketInstance *>(this)->Size(); }
 		void Size(size_t size)
 		{
-			assert(size_ <= Protocol::DataSize);
+			assert(size_ <= Protocol::BodySize);
 			size_ = Protocol::HeaderLength + size;
 		}
 		void Cmd(typename Protocol::CmdType cmd) { cmd_ = cmd; }
 		typename Protocol::CmdType Cmd() { return const_cast<const PacketInstance *>(this)->Cmd(); }
-		char *Data() { return data_; }
-		const char *Data() const { return data_; }
-
-		inline char *Buffer()
-		{
-			return reinterpret_cast<char *>(this);
-		}
-
-		inline const char *Buffer() const
-		{
-			return reinterpret_cast<const char *>(this);
-		}
+		char *Body() { return body_; }
+		const char *Body() const { return body_; }
+		inline char *Buffer() { return reinterpret_cast<char *>(this); }
+		inline const char *Buffer() const { return reinterpret_cast<const char *>(this); }
 
 		size_t Size() const { return size_; }
 		typename Protocol::CmdType Cmd() const { return cmd_; }
@@ -79,17 +75,21 @@ namespace cppnat
 			return *reinterpret_cast<const PacketInstance *>(buffer);
 		}
 
-		PacketInstance() = delete;
-		PacketInstance(const PacketInstance &packet) = delete;
-		PacketInstance &operator=(const PacketInstance &packet) = delete;
+		static inline PacketInstance &ToPacket(char *buffer, size_t bufferSize)
+		{
+			assert(bufferSize >= Protocol::PacketSize);
+			return *reinterpret_cast<PacketInstance *>(buffer);
+		}
 
-		inline Proxy To() { return Proxy(data_); }
-		inline const Proxy To() const { return Proxy(const_cast<char *>(data_)); }
+		inline Proxy To() { return Proxy(body_); }
+		inline const Proxy To() const { return Proxy(const_cast<char *>(body_)); }
+
+		static const size_t bodySize = Protocol::BodySize;
 
 	private:
 		typename Protocol::SizeType size_;
 		typename Protocol::CmdType cmd_;
-		char data_[Protocol::PacketSize - Protocol::SizeLength - Protocol::CmdLength];
+		char body_[bodySize];
 	};
 
 	template <typename Protocol>
@@ -157,7 +157,8 @@ namespace cppnat
 							 extraOffset_(0),
 							 handler_() {}
 
-		inline void AddCallback(typename Protocol::CmdType cmd, const typename PacketHandlerType::Callback &callback)
+		inline void AddCallback(typename Protocol::CmdType cmd,
+								const typename PacketHandlerType::Callback &callback)
 		{
 			handler_.Add(cmd, callback);
 		}

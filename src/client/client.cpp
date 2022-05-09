@@ -32,10 +32,10 @@ public:
 
 	bool SendEchoMessage(const std::string &message)
 	{
-		Packet packet = writeBuffer_.Packet();
-		packet.Cmd(MessageCmd::CMD_ECHO);
+		Packet &packet = writeBuffer_.Packet();
+		packet.Cmd(MessageCmd::CMD_Echo);
 		packet.Size(message.size() + 1);
-		strcpy(packet.Data(), message.c_str());
+		strcpy(packet.Body(), message.c_str());
 		serverSocket_.write_some(asio::buffer(packet.Buffer(), packet.Size()),
 								 ec_);
 		if (ec_)
