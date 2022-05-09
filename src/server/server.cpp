@@ -8,9 +8,9 @@
 #define HandleError(ec)                               \
 	do                                                \
 	{                                                 \
-		StreamWriter sw;                              \
-		sw << ec << " " << ec.message() << std::endl; \
-		sw.Write();                                   \
+		std::stringstream sw;                         \
+		sw << "server:" << ec << " " << ec.message(); \
+		LOG_ERROR(sw.str());                          \
 	} while (0)
 
 using namespace cppnat;
@@ -37,12 +37,14 @@ public:
 
 	bool Start()
 	{
+		LOG_INFO("server start");
 		InitHandler();
 		for (;;)
 		{
 			ios_.restart();
 			if (!WaitForClient())
 				return false;
+			LOG_INFO("client connected");
 			BeginProxy();
 			ios_.run();
 		}
@@ -84,17 +86,11 @@ protected:
 			[this, &dt, &packet, connHelper](const boost::system::error_code &ec,
 											 size_t bytes_transffered) -> void
 			{
-				std::cout << "server got " << bytes_transffered << std::endl;
-				StreamWriter sw;
-				for (size_t i = 0; i < bytes_transffered; i++)
-				{
-					sw << size_t(unsigned char(dt.data[i])) << " ";
-				}
-				sw << std::endl;
-				sw.Write();
 				if (ec)
 				{
-					HandleError(ec);
+					LOG_ERROR(std::string("user connection error: connId:") +
+							  std::to_string(connHelper->id) + " " +
+							  std::to_string(ec.value()) + " " + ec.message());
 					OnConnError(connHelper);
 				}
 				else
@@ -113,16 +109,6 @@ protected:
 	{
 		reader_.AddCallback(MessageCmd::CMD_Echo,
 							[](ConstPacket &packet) -> void {
-#ifndef __DISABLE_ECHO_OUTPUT__
-#else
-				StreamWriter sw;
-				sw << "--------CMD_ECHO--------" << std::endl
-				   << "cmd: " << unsigned long long(packet.Cmd()) << std::endl
-				   << "size: " << packet.Size() << std::endl
-				   << "data: " << packet.Body() << std::endl
-				   << "------CMD_ECHO_END------" << std::endl;
-				sw.Write();
-#endif
 							});
 
 		reader_.AddCallback(MessageCmd::CMD_AcceptNewConn,
@@ -156,6 +142,7 @@ protected:
 		reader_.AddCallback(MessageCmd::CMD_ConnClosed, [this](ConstPacket &packet) -> void
 							{
 								const Msg::ConnClosed &msg = packet.To();
+								LOG_INFO("server:closing conn,id: " + std::to_string(msg.id));
 								connManager_.Get(msg.id)->conn->close(ec_);
 								if (ec_)
 								{
@@ -165,6 +152,7 @@ protected:
 
 	bool WaitForClient()
 	{
+		LOG_INFO("waiting for client");
 		static constexpr size_t tempBufferSize = 64;
 		char tempBuffer[tempBufferSize];
 		asio::mutable_buffer tempBufferPtr = asio::buffer(tempBuffer, tempBufferSize);
@@ -219,14 +207,6 @@ protected:
 
 	void SendToClient(ConstPacket &packet)
 	{
-		StreamWriter sw;
-		sw << "to client:" << std::endl;
-		for (size_t i = 0; i < packet.Size(); i++)
-		{
-			sw << size_t(unsigned char(packet.Buffer()[i])) << " ";
-		}
-		sw << std::endl;
-		sw.Write();
 		asio::write(client_,
 					asio::buffer(packet.Buffer(), packet.Size()),
 					ec_);
@@ -239,6 +219,7 @@ protected:
 
 	void OnNewUserConnection(ConnHelper *helper)
 	{
+		LOG_INFO("new user connection");
 		Packet &packet = writer_.Packet();
 		packet.Cmd(MessageCmd::CMD_RequestNewConn);
 		packet.Size(sizeof(Msg::NewConnAccept));
@@ -261,9 +242,6 @@ protected:
 					ios_.stop();
 					return;
 				}
-				StreamWriter sw;
-				sw << "new connection: " << tempSocket.remote_endpoint() << std::endl;
-				sw.Write();
 				ConnHelper *helper =
 					connManager_.New(std::move(tempSocket));
 				if (helper == nullptr)

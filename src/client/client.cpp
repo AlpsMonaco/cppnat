@@ -10,9 +10,9 @@ using namespace cppnat;
 #define HandleError(ec)                               \
 	do                                                \
 	{                                                 \
-		StreamWriter sw;                              \
-		sw << ec << " " << ec.message() << std::endl; \
-		sw.Write();                                   \
+		std::stringstream sw;                         \
+		sw << "client:" << ec << " " << ec.message(); \
+		LOG_ERROR(sw.str());                          \
 	} while (0)
 
 #define CImpl Client::Impl
@@ -46,17 +46,11 @@ public:
 				const boost::system::error_code &ec,
 				size_t bytes_transffered) -> void
 			{
-				std::cout << "client got " << bytes_transffered << std::endl;
-				StreamWriter sw;
-				for (size_t i = 0; i < bytes_transffered; i++)
-				{
-					sw << size_t(unsigned char(dt.data[i])) << " ";
-				}
-				sw << std::endl;
-				sw.Write();
 				if (ec)
 				{
-					HandleError(ec);
+					LOG_ERROR(std::string("host connection error: connId:") +
+							  std::to_string(connHelper->id) + " " +
+							  std::to_string(ec.value()) + " " + ec.message());
 					OnConnError(connHelper);
 					connHelper->conn->close();
 				}
@@ -91,6 +85,11 @@ public:
 			{
 				const Msg::NewConnAccept &msg = packet.To();
 				ConnHelper *connHelper = connManager_.NewAt(msg.id, ios_);
+				if (connHelper == nullptr)
+				{
+					LOG_ERROR(std::string("binding opened conn id: ") + std::to_string(msg.id));
+					return;
+				}
 				connHelper->conn->async_connect(
 					targetEndpoint_,
 					[this, connHelper](const boost::system::error_code &ec) -> void
@@ -122,6 +121,7 @@ public:
 							{
 								const Msg::ConnClosed &msg = packet.To();
 								connManager_.Get(msg.id)->conn->close(ec_);
+								LOG_INFO("client:closing conn,id: " + std::to_string(msg.id));
 								if (ec_)
 								{
 									HandleError(ec_);
@@ -145,14 +145,6 @@ public:
 
 	void WriteToServer(ConstPacket &packet)
 	{
-		StreamWriter sw;
-		sw << "to server:" << std::endl;
-		for (size_t i = 0; i < packet.Size(); i++)
-		{
-			sw << size_t(unsigned char(packet.Buffer()[i])) << " ";
-		}
-		sw << std::endl;
-		sw.Write();
 		asio::write(serverSocket_,
 					asio::buffer(packet.Buffer(), packet.Size()),
 					ec_);
@@ -165,12 +157,15 @@ public:
 
 	bool CImpl::Start()
 	{
+		LOG_INFO("client start");
 		ios_.restart();
+		LOG_INFO("connecting to server");
 		serverSocket_.connect(serverEndpoint_, ec_);
 		if (ec_)
 			return false;
 		if (!Handshake())
 			return false;
+		LOG_INFO("connected to server");
 		ServerMessageLoop();
 		ios_.run();
 		return true;
@@ -210,6 +205,7 @@ public:
 
 	bool CImpl::Handshake()
 	{
+		LOG_INFO("handshaking with server");
 		static constexpr size_t tempBufferSize = 64;
 		char tempBuffer[tempBufferSize];
 

@@ -1,7 +1,12 @@
 #ifndef __CPP_NAT_UTIL_HPP__
 #define __CPP_NAT_UTIL_HPP__
+
 #include <assert.h>
-#include <string.h>
+#include <string>
+#include <iostream>
+
+namespace cppnat
+{
 
 #define ASSERT(what, expression)                                        \
 	if (!(expression))                                                  \
@@ -11,45 +16,20 @@
 		assert(expression);                                             \
 	}
 
-#endif
-
-#ifndef __PRINT_MULTI_ARGS__
-#define __PRINT_MULTI_ARGS__
-#include <iostream>
-#include <sstream>
-
-template <typename T>
-inline void Print(T t) { std::cout << t; }
-
-template <typename T, typename... Args>
-void Print(T t, Args... args)
-{
-	std::cout << t << " ";
-	Print(args...);
+#define LOG_INFO(what)                                                                                       \
+	do                                                                                                       \
+	{                                                                                                        \
+		std::cout << std::string("[INFO] ") + __FILE__ + ":" + std::to_string(__LINE__) + " " + what + "\n"; \
+	} while (0)
+#define LOG_ERROR(what)                                                                                       \
+	do                                                                                                        \
+	{                                                                                                         \
+		std::cout << std::string("[ERROR] ") + __FILE__ + ":" + std::to_string(__LINE__) + " " + what + "\n"; \
+	} while (0)
+#define LOG_DEBUG(what)                                                                                       \
+	do                                                                                                        \
+	{                                                                                                         \
+		std::cout << std::string("[DEBUG] ") + __FILE__ + ":" + std::to_string(__LINE__) + " " + what + "\n"; \
+	} while (0)
 }
-
-template <typename... Args>
-void Println(Args... args)
-{
-	Print(args...);
-	std::cout << std::endl;
-}
-
-class StreamWriter : public std::stringstream
-{
-public:
-	StreamWriter() : std::stringstream() {}
-	~StreamWriter() {}
-
-	void Write()
-	{
-		std::cout << this->str();
-	}
-
-	void Reset()
-	{
-		this->str("");
-	}
-};
-
 #endif

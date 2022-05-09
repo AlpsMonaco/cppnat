@@ -4,9 +4,9 @@
 #include <iostream>
 
 constexpr char *kAddress = "127.0.0.1";
-constexpr char *kTargetAddress = "192.168.1.202";
+constexpr char *kTargetAddress = "119.91.79.104";
 constexpr unsigned short kListenPort = 8878;
-constexpr unsigned short kTargetPort = 33123;
+constexpr unsigned short kTargetPort = 3389;
 
 using namespace cppnat;
 int main(int argc, char **argv)
