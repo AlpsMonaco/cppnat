@@ -1,34 +1,27 @@
-#include "server/server.h"
-#include "client/client.h"
-#include <thread>
+#include <fstream>
+#include <streambuf>
 #include <iostream>
+#include <string>
+#include <rapidjson/document.h>
 
-constexpr char *kAddress = "127.0.0.1";
-constexpr char *kTargetAddress = "119.91.79.104";
-constexpr unsigned short kListenPort = 8878;
-constexpr unsigned short kTargetPort = 3389;
+using namespace rapidjson;
 
-using namespace cppnat;
 int main(int argc, char **argv)
 {
-	std::thread serverThread(
-		[]() -> void
-		{
-			Server server(kAddress, kListenPort);
-			if (!server.Start())
-			{
-				std::cout << server.Error() << std::endl;
-				return;
-			}
-		});
-
-	Client client(kAddress, kListenPort,
-				  kTargetAddress, kTargetPort);
-
-	if (!client.Start())
+	std::ifstream ifs("config.json");
+	if (!ifs.is_open())
 	{
-		std::cout << client.Error() << std::endl;
 		return -1;
 	}
-	serverThread.join();
+	std::string config((std::istreambuf_iterator<char>(ifs)),
+					   std::istreambuf_iterator<char>());
+	ifs.close();
+	std::cout << config << std::endl;
+
+	Document doc;
+	doc.Parse(config.c_str());
+	std::cout << doc["server"]["ip"].GetString() << std::endl;
+	std::cout << doc["server"]["port"].GetInt() << std::endl;
+	std::cout << doc["proxy"]["ip"].GetString() << std::endl;
+	std::cout << doc["proxy"]["port"].GetInt() << std::endl;
 }
