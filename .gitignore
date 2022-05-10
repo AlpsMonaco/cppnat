@@ -36,3 +36,4 @@
 *.ilk
 
 thirdparty/boost
+thirdparty/rapidjson
