@@ -1,27 +1,24 @@
-#include <fstream>
-#include <streambuf>
-#include <iostream>
-#include <string>
-#include <rapidjson/document.h>
+#include "server/server.h"
+#include "client/client.h"
+#include <thread>
 
-using namespace rapidjson;
+const char *kAddress = "127.0.0.1";
+const int kPort = 9999;
+const char *kAddress2 = "192.168.1.202";
+const int kPort2 = 33123;
 
 int main(int argc, char **argv)
 {
-	std::ifstream ifs("config.json");
-	if (!ifs.is_open())
-	{
-		return -1;
-	}
-	std::string config((std::istreambuf_iterator<char>(ifs)),
-					   std::istreambuf_iterator<char>());
-	ifs.close();
-	std::cout << config << std::endl;
+    using namespace cppnat;
+    Server s(kAddress, kPort);
+    Client c(kAddress, kPort, kAddress2, kPort2);
 
-	Document doc;
-	doc.Parse(config.c_str());
-	std::cout << doc["server"]["ip"].GetString() << std::endl;
-	std::cout << doc["server"]["port"].GetInt() << std::endl;
-	std::cout << doc["proxy"]["ip"].GetString() << std::endl;
-	std::cout << doc["proxy"]["port"].GetInt() << std::endl;
+    std::thread([&]() -> void
+                { s.Start(); })
+        .detach();
+    for (;;)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        c.Start();
+    }
 }

@@ -5,6 +5,7 @@
 #include <string_view>
 #include "util.h"
 #include "packet.h"
+#include "log.h"
 
 namespace cppnat
 {

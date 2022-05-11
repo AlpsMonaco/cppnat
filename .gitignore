@@ -34,6 +34,8 @@
 
 
 *.ilk
+*.log
 
 thirdparty/boost
 thirdparty/rapidjson
+thirdparty/spdlog

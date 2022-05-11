@@ -15,21 +15,5 @@ namespace cppnat
 		fflush(stdout);                                                 \
 		assert(expression);                                             \
 	}
-
-#define LOG_INFO(what)                                                                                       \
-	do                                                                                                       \
-	{                                                                                                        \
-		std::cout << std::string("[INFO] ") + __FILE__ + ":" + std::to_string(__LINE__) + " " + what + "\n"; \
-	} while (0)
-#define LOG_ERROR(what)                                                                                       \
-	do                                                                                                        \
-	{                                                                                                         \
-		std::cout << std::string("[ERROR] ") + __FILE__ + ":" + std::to_string(__LINE__) + " " + what + "\n"; \
-	} while (0)
-#define LOG_DEBUG(what)                                                                                       \
-	do                                                                                                        \
-	{                                                                                                         \
-		std::cout << std::string("[DEBUG] ") + __FILE__ + ":" + std::to_string(__LINE__) + " " + what + "\n"; \
-	} while (0)
 }
 #endif
