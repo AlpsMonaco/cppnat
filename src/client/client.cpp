@@ -157,9 +157,10 @@ public:
 
 	bool CImpl::Start()
 	{
-		LOG_INFO("client start");
 		ios_.restart();
 		LOG_INFO("connecting to server");
+		if (serverSocket_.is_open())
+			serverSocket_.close();
 		serverSocket_.connect(serverEndpoint_, ec_);
 		if (ec_)
 			return false;

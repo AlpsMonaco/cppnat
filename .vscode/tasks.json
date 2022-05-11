@@ -2,7 +2,38 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "release - win",
+            "label": "build server (win)",
+            "command": "cl.exe",
+            "args": [
+                "/EHsc",
+                "/std:c++17",
+                "/I${workspaceRoot}/thirdparty/boost",
+                "/nologo",
+                "/D__CPP_NAT_BUILD_SERVER__",
+                "/MD",
+                "/D_WIN32_WINNT=0x0601",
+                "/DNDEBUG",
+                "/Ox",
+                "/Fe:",
+                "${workspaceFolder}\\bin\\server.exe",
+                "${workspaceFolder}\\src\\main.cpp",
+                "${workspaceFolder}\\src\\server\\server.cpp",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "调试器生成的任务。"
+        },
+        {
+            "type": "cppbuild",
+            "label": "build client (win)",
             "command": "cl.exe",
             "args": [
                 "/EHsc",
@@ -14,10 +45,9 @@
                 "/DNDEBUG",
                 "/Ox",
                 "/Fe:",
-                "${workspaceFolder}\\main.exe",
+                "${workspaceFolder}\\bin\\client.exe",
                 "${workspaceFolder}\\src\\main.cpp",
-                "${workspaceFolder}\\src\\server\\server.cpp",
-                "${workspaceFolder}\\src\\client\\client.cpp"
+                "${workspaceFolder}\\src\\client\\client.cpp",
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -44,7 +74,7 @@
                 "/nologo",
                 "/MDd",
                 "/Fe:",
-                "${workspaceFolder}\\main.exe",
+                "${workspaceFolder}\\bin\\main.exe",
                 "${workspaceFolder}\\src\\main.cpp",
                 "${workspaceFolder}\\src\\server\\server.cpp",
                 "${workspaceFolder}\\src\\client\\client.cpp"
