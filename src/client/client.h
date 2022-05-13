@@ -14,8 +14,6 @@ namespace cppnat
 		~Client();
 		void Close();
 		bool Start();
-		const char *Error();
-		int Errno();
 		bool SendEchoMessage(const std::string &message);
 
 	protected:

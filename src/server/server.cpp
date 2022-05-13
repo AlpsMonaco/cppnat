@@ -5,14 +5,6 @@
 #include <boost/asio.hpp>
 #include "../connection.h"
 
-#define HandleError(ec)                               \
-	do                                                \
-	{                                                 \
-		std::stringstream sw;                         \
-		sw << "server:" << ec << " " << ec.message(); \
-		LOG_ERROR(sw.str());                          \
-	} while (0)
-
 using namespace cppnat;
 using namespace boost;
 using asio::ip::address;
@@ -49,9 +41,6 @@ public:
 			ios_.run();
 		}
 	}
-
-	std::string Error() { return ec_.message(); }
-	int Errno() { return ec_.value(); }
 
 protected:
 	asio::io_service ios_;
@@ -134,7 +123,7 @@ protected:
 												  [this, connHelper](const boost::system::error_code &ec,
 												   size_t bytes_transffered) -> void {
 													   if(ec){
-														   HandleError(ec);
+														   LOG_ERROR("CMD_DataTransfer:"+ ec.message());
 														   OnConnError(connHelper);
 													   }
 												   }
@@ -146,7 +135,7 @@ protected:
 								connManager_.Get(msg.id)->conn->close(ec_);
 								if (ec_)
 								{
-									HandleError(ec_);
+									LOG_ERROR(std::string("CMD_ConnClosed") + ec_.message());
 								} });
 	}
 
@@ -160,21 +149,28 @@ protected:
 		for (;;)
 		{
 			client_ = acceptor_.accept(ec_);
+			LOG_DEBUG("accepted new conn:" + client_.remote_endpoint().address().to_string() + ":" + std::to_string(client_.remote_endpoint().port()));
 			if (ec_)
+			{
+				LOG_ERROR("accept failed " + ec_.message());
 				return false;
+			}
 			readNum = client_.read_some(tempBufferPtr, ec_);
 			if (ec_)
 			{
+				LOG_ERROR("read failed while handshaking " + ec_.message());
 				client_.close();
 				continue;
 			}
 			if (readNum == 0)
 			{
+				LOG_ERROR("server read 0 byte while handshaking");
 				client_.close();
 				continue;
 			}
 			if (!Handshake::IsMatch<Handshake::VerifyClient>(tempBuffer, readNum))
 			{
+				LOG_ERROR("!Handshake::IsMatch<Handshake::VerifyClient>(tempBuffer, readNum)");
 				client_.close();
 				continue;
 			}
@@ -195,8 +191,7 @@ protected:
 								{
 									if (ec)
 									{
-										HandleError(ec);
-										ec_ = ec;
+										LOG_ERROR("client read failed " + ec.message());
 										ios_.stop();
 										return;
 									}
@@ -212,7 +207,7 @@ protected:
 					ec_);
 		if (ec_)
 		{
-			HandleError(ec_);
+			LOG_ERROR("write failed " + ec_.message());
 			ios_.stop();
 		}
 	}
@@ -237,11 +232,11 @@ protected:
 			{
 				if (ec)
 				{
-					HandleError(ec);
-					ec_ = ec;
+					LOG_ERROR(std::string("accept failed ") + ec.message());
 					ios_.stop();
 					return;
 				}
+				LOG_DEBUG("accepted new conn:" + client_.remote_endpoint().address().to_string() + ":" + std::to_string(client_.remote_endpoint().port()));
 				ConnHelper *helper =
 					connManager_.New(std::move(tempSocket));
 				if (helper == nullptr)
@@ -273,6 +268,3 @@ bool Server::Start() { return pImpl_->Start(); }
 void Server::Stop()
 {
 }
-
-std::string Server::Error() { return pImpl_->Error(); }
-int Server::Errno() { return pImpl_->Errno(); }

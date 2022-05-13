@@ -13,8 +13,6 @@ namespace cppnat
 		~Server();
 		bool Start();
 		void Stop();
-		std::string Error();
-		int Errno();
 
 	protected:
 		class Impl;

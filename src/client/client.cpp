@@ -7,12 +7,12 @@
 using namespace boost;
 using namespace cppnat;
 
-#define HandleError(ec)                               \
-	do                                                \
-	{                                                 \
-		std::stringstream sw;                         \
-		sw << "client:" << ec << " " << ec.message(); \
-		LOG_ERROR(sw.str());                          \
+#define HandleError(ec)                            \
+	do                                             \
+	{                                              \
+		std::stringstream sw;                      \
+		sw << "client:" << ec << " " << ec.what(); \
+		LOG_ERROR(sw.str());                       \
 	} while (0)
 
 #define CImpl Client::Impl
@@ -163,7 +163,10 @@ public:
 			serverSocket_.close();
 		serverSocket_.connect(serverEndpoint_, ec_);
 		if (ec_)
+		{
+			LOG_ERROR(ec_.message());
 			return false;
+		}
 		if (!Handshake())
 			return false;
 		LOG_INFO("connected to server");
@@ -207,40 +210,36 @@ public:
 	bool CImpl::Handshake()
 	{
 		LOG_INFO("handshaking with server");
-		static constexpr size_t tempBufferSize = 64;
-		char tempBuffer[tempBufferSize];
 
-		static size_t size = serverSocket_.write_some(
-			asio::buffer(
-				Handshake::VerifyClient::data,
-				Handshake::VerifyClient::size),
-			ec_);
+		size_t size = asio::write(serverSocket_,
+								  asio::buffer(Handshake::VerifyClient::data,
+											   Handshake::VerifyClient::size),
+								  ec_);
 		if (ec_)
-			return false;
-		if (size != Handshake::VerifyClient::size)
 		{
-			ec_ = asio::error::eof;
+			LOG_ERROR("error occurs while write to server:" + ec_.message());
 			return false;
 		}
+		if (size != Handshake::VerifyClient::size)
+		{
+			LOG_ERROR("size of sending VerifyClient not match" +
+					  std::to_string(size) + " != " + std::to_string(Handshake::VerifyClient::size));
+			return false;
+		}
+		static constexpr size_t tempBufferSize = 64;
+		char tempBuffer[tempBufferSize];
 		size = serverSocket_.read_some(asio::buffer(tempBuffer, tempBufferSize), ec_);
 		if (ec_)
+		{
+			LOG_ERROR("error occurs while read from server:" + ec_.message());
 			return false;
+		}
 		if (!Handshake::IsMatch<Handshake::ResponseOK>(tempBuffer, size))
 		{
-			ec_ = asio::error::invalid_argument;
+			LOG_ERROR("!Handshake::IsMatch<Handshake::ResponseOK>(tempBuffer, size)");
 			return false;
 		}
 		return true;
-	}
-
-	inline const char *Error()
-	{
-		return ec_.message().c_str();
-	}
-
-	inline int Errno()
-	{
-		return ec_.value();
 	}
 
 	void Close() {}
@@ -275,16 +274,6 @@ void Client::Close()
 bool Client::Start()
 {
 	return pImpl_->Start();
-}
-
-const char *Client::Error()
-{
-	return pImpl_->Error();
-}
-
-int Client::Errno()
-{
-	return pImpl_->Errno();
 }
 
 bool Client::SendEchoMessage(const std::string &msg)

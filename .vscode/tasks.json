@@ -2,7 +2,7 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "build server (win)",
+            "label": "release server (win)",
             "command": "cl.exe",
             "args": [
                 "/EHsc",
@@ -20,7 +20,7 @@
                 "${workspaceFolder}\\src\\server\\server.cpp",
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}\\bin"
             },
             "problemMatcher": [
                 "$msCompile"
@@ -33,7 +33,7 @@
         },
         {
             "type": "cppbuild",
-            "label": "build client (win)",
+            "label": "release client (win)",
             "command": "cl.exe",
             "args": [
                 "/EHsc",
@@ -50,7 +50,7 @@
                 "${workspaceFolder}\\src\\client\\client.cpp",
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}\\bin"
             },
             "problemMatcher": [
                 "$msCompile"
@@ -63,7 +63,7 @@
         },
         {
             "type": "cppbuild",
-            "label": "build - win",
+            "label": "build client (win)",
             "command": "cl.exe",
             "args": [
                 "/Zi",
@@ -74,13 +74,42 @@
                 "/nologo",
                 "/MDd",
                 "/Fe:",
-                "${workspaceFolder}\\bin\\main.exe",
+                "${workspaceFolder}\\bin\\client.exe",
                 "${workspaceFolder}\\src\\main.cpp",
-                "${workspaceFolder}\\src\\server\\server.cpp",
                 "${workspaceFolder}\\src\\client\\client.cpp"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}\\bin"
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "调试器生成的任务。"
+        },
+        {
+            "type": "cppbuild",
+            "label": "build server (win)",
+            "command": "cl.exe",
+            "args": [
+                "/Zi",
+                "/EHsc",
+                "/std:c++17",
+                "/D_WIN32_WINNT=0x0601",
+                "/D__CPP_NAT_BUILD_SERVER__",
+                "/I${workspaceRoot}/thirdparty/boost",
+                "/nologo",
+                "/MDd",
+                "/Fe:",
+                "${workspaceFolder}\\bin\\server.exe",
+                "${workspaceFolder}\\src\\main.cpp",
+                "${workspaceFolder}\\src\\server\\server.cpp",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\bin"
             },
             "problemMatcher": [
                 "$msCompile"

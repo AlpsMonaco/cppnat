@@ -92,7 +92,7 @@ void Start(NatConfig &config)
 
         if (!client.Start())
         {
-            LOG_ERROR(client.Error());
+            LOG_ERROR("connect to server failed.");
             std::this_thread::sleep_for(std::chrono::seconds(3));
             LOG_INFO("retrying...");
         }

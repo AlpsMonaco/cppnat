@@ -90,8 +90,10 @@ namespace cppnat
     protected:
         Log() : pLogger_(spdlog::basic_logger_mt("cppnat", "cppnat.log"))
         {
+            pLogger_->set_level(spdlog::level::debug);
             pLogger_->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-            pLogger_->flush_on(spdlog::level::err);
+            pLogger_->flush_on(spdlog::level::debug);
+            spdlog::set_level(spdlog::level::debug);
         }
         ~Log() {}
 
@@ -131,12 +133,12 @@ namespace cppnat
         cppnat::Log::Ins()->warn(m); \
     } while (0)
 
-#define LOG_DEBUG(message)            \
-    do                                \
-    {                                 \
-        const auto &m = message;      \
-        PRINT_DEBUG(m);               \
-        cppnat::Log::Ins()->debug(m); \
+#define LOG_DEBUG(message)                                                                      \
+    do                                                                                          \
+    {                                                                                           \
+        const auto &m = std::string(__FILE__) + ":" + std::to_string(__LINE__) + " " + message; \
+        PRINT_DEBUG(m);                                                                         \
+        cppnat::Log::Ins()->debug(m);                                                           \
     } while (0)
 
 #define LOG_TRACE(message)            \
