@@ -18,14 +18,14 @@ class Server::Impl
 public:
 	using Conn = std::shared_ptr<asio::ip::tcp::socket>;
 
-	SImpl::Impl(const char *listenAddr,
+	Impl(const char *listenAddr,
 				unsigned short listenPort) : ios_(),
 											 acceptor_(ios_, tcp::endpoint(address::from_string(listenAddr), listenPort)),
 											 client_(ios_),
 											 connManager_(128)
 	{
 	}
-	SImpl::~Impl() {}
+	~Impl() {}
 
 	bool Start()
 	{

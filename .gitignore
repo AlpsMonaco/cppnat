@@ -39,3 +39,6 @@
 thirdparty/boost
 thirdparty/rapidjson
 thirdparty/spdlog
+
+
+bin/*

@@ -23,7 +23,7 @@ protected:
 	using ConnHelper = typename ConnManager<asio::ip::tcp::socket, kBufferSize>::ConnHelper;
 
 public:
-	CImpl::Impl(const char *serverAddr, unsigned short serverPort,
+	Impl(const char *serverAddr, unsigned short serverPort,
 				const char *forwardAddr, unsigned short forwardPort)
 		: serverSocket_(ios_),
 		  serverEndpoint_(asio::ip::address::from_string(serverAddr), serverPort),
@@ -32,7 +32,7 @@ public:
 	{
 		InitHandler();
 	}
-	CImpl::~Impl() {}
+	~Impl() {}
 
 	void OnRecvTargetData(ConnHelper *connHelper)
 	{
@@ -155,7 +155,7 @@ public:
 		}
 	}
 
-	bool CImpl::Start()
+	bool Start()
 	{
 		ios_.restart();
 		LOG_INFO("connecting to server");
@@ -207,7 +207,7 @@ public:
 		return true;
 	}
 
-	bool CImpl::Handshake()
+	bool Handshake()
 	{
 		LOG_INFO("handshaking with server");
 

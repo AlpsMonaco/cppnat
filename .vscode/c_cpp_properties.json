@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}\\thirdparty\\boost"
+                "/mnt/d/repository/boost"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",

@@ -122,24 +122,47 @@
         },
         {
             "type": "cppbuild",
-            "label": "build - linux",
+            "label": "build server (linux)",
             "command": "/usr/bin/g++",
             "args": [
                 "-fdiagnostics-color=always",
                 "-I",
-                "/mnt/g/repository/boost",
-                "-L",
-                "/mnt/g/repository/boost/stage/lib/",
-                "-l",
-                "boost_filesystem",
-                "-g",
+                "/mnt/d/include",
+                "-std=c++17",
+                "-D",
+                "__CPP_NAT_BUILD_SERVER__",
                 "${workspaceFolder}/src/main.cpp",
+                "${workspaceFolder}/src/server/server.cpp",
                 "-o",
-                "${workspaceFolder}/main",
+                "${workspaceFolder}/bin/server",
                 "-pthread"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}/bin"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "编译器: /usr/bin/g++",
+        },
+        {
+            "type": "cppbuild",
+            "label": "build client (linux)",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-I",
+                "/mnt/d/include",
+                "-std=c++17",
+                "${workspaceFolder}/src/main.cpp",
+                "${workspaceFolder}/src/client/client.cpp",
+                "-o",
+                "${workspaceFolder}/bin/client",
+                "-pthread"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/bin"
             },
             "problemMatcher": [
                 "$gcc"

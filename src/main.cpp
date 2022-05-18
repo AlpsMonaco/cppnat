@@ -8,7 +8,7 @@
 
 using namespace rapidjson;
 
-constexpr char *kConfigFile = "config.json";
+const char *kConfigFile = "config.json";
 
 bool ParseConfigFile(Document &d)
 {

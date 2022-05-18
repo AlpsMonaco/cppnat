@@ -5,6 +5,7 @@
 
 #include <map>
 #include <functional>
+#include <string.h>
 #include "util.h"
 #include "buffer.h"
 
@@ -27,9 +28,9 @@ namespace cppnat
 	{
 		using PacketInstance = PacketWrapper<Protocol>;
 
-		PacketInstance() = delete;
-		PacketInstance(const PacketInstance &packet) = delete;
-		PacketInstance &operator=(const PacketInstance &packet) = delete;
+		PacketWrapper() = delete;
+		PacketWrapper(const PacketInstance &packet) = delete;
+		PacketWrapper &operator=(const PacketInstance &packet) = delete;
 
 		size_t Size() { return const_cast<const PacketInstance *>(this)->Size(); }
 		void Size(size_t size)
@@ -136,7 +137,7 @@ namespace cppnat
 			return packet_;
 		}
 
-		inline char *Buffer()
+		inline char *GetBuffer()
 		{
 			return buffer_.Get();
 		}
