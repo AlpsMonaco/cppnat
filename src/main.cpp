@@ -66,9 +66,13 @@ void Start(NatConfig &config)
         LOG_ERROR("server ip is empty");
         return;
     }
-    Server server(config.serverIp.c_str(),
-                  config.serverPort);
-    server.Start();
+    for (;;)
+    {
+        Server server(config.serverIp.c_str(),
+                      config.serverPort);
+        if (!server.Start())
+            break;
+    }
 }
 #else
 #include "client/client.h"
@@ -85,11 +89,10 @@ void Start(NatConfig &config)
         return;
     }
 
-    Client client(config.serverIp.c_str(), config.serverPort,
-                  config.proxyIp.c_str(), config.proxyPort);
     for (;;)
     {
-
+        Client client(config.serverIp.c_str(), config.serverPort,
+                      config.proxyIp.c_str(), config.proxyPort);
         if (!client.Start())
         {
             LOG_ERROR("connect to server failed.");

@@ -19,10 +19,10 @@ public:
 	using Conn = std::shared_ptr<asio::ip::tcp::socket>;
 
 	Impl(const char *listenAddr,
-				unsigned short listenPort) : ios_(),
-											 acceptor_(ios_, tcp::endpoint(address::from_string(listenAddr), listenPort)),
-											 client_(ios_),
-											 connManager_(128)
+		 unsigned short listenPort) : ios_(),
+									  acceptor_(ios_, tcp::endpoint(address::from_string(listenAddr), listenPort)),
+									  client_(ios_),
+									  connManager_(128)
 	{
 	}
 	~Impl() {}
@@ -31,15 +31,13 @@ public:
 	{
 		LOG_INFO("server start");
 		InitHandler();
-		for (;;)
-		{
-			ios_.restart();
-			if (!WaitForClient())
-				return false;
-			LOG_INFO("client connected");
-			BeginProxy();
-			ios_.run();
-		}
+		if (!WaitForClient())
+			return false;
+		LOG_INFO("client connected");
+		BeginProxy();
+		ios_.run();
+		LOG_ERROR("lost connection with client");
+		return true;
 	}
 
 protected:
