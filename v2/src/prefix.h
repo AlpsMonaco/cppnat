@@ -9,11 +9,12 @@
 
 // C++ Standard library
 #include <cstdint>
-#include <string>
-#include <memory>
+#include <functional>
 #include <iostream>
 #include <map>
-#include <functional>
+#include <memory>
+#include <utility>
+#include <string>
 
 // include only third_party directory to compiler's include path parameter.
 #include <asio/asio/include/asio.hpp>
@@ -42,6 +43,21 @@ public:
     }
 };
 
+template <size_t buffer_size>
+class BufferSize
+{
+public:
+    Buffer() {}
+    ~Buffer() {}
+    static constexpr size_t size = buffer_size;
+
+    char* Get() { return buffer_; }
+    size_t Size() { return buffer_size; }
+
+protected:
+    buffer_[buffer_size];
+};
+
 using SocketPtr = std::shared_ptr<asio::ip::tcp::socket>;
 inline SocketPtr CreateSocket(asio::io_service& ios)
 {
@@ -58,6 +74,9 @@ inline TimerPtr CreateTimer(asio::io_service& ios)
 {
     return std::make_shared<asio::steady_timer>(ios);
 }
+
+using ErrorHandler = std::function<void(const std::error_code& ec)>;
+using ErrorHandlerPtr = std::shared_ptr<ErrorHandler>;
 
 NAMESPACE_CPPNAT_END
 
