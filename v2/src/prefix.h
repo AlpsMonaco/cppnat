@@ -13,8 +13,8 @@
 #include <string>
 #include <utility>
 
-// include only third_party directory to compiler's include path parameter.
-#include <asio/asio/include/asio.hpp>
+// C++ third party library
+#include <asio.hpp>
 
 NAMESPACE_CPPNAT_START
 
@@ -48,7 +48,7 @@ class BufferSize {
   size_t Size() { return buffer_size; }
 
  protected:
-  buffer_[buffer_size];
+  char buffer_[buffer_size];
 };
 
 class DynamicBuffer {

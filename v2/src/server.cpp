@@ -87,7 +87,7 @@ void Server::Proxy(SocketPtr socket_ptr) {
 
 void Server::BeginProxy(size_t id) {
   auto proxy_socket_ptr = proxy_socket_map_[id];
-  proxy_socket_ptr->SetOnRecv([&](const ProxyData &proxy_data) -> void {
+  proxy_socket_ptr->SetOnRecv([&](ProxyData &proxy_data) -> void {
     auto ec = message_writer_.Write(ClientMessage::MessageEnum::kDataTransfer,
                                     proxy_data);
     if (ec) {
@@ -100,9 +100,9 @@ void Server::BeginProxy(size_t id) {
       [&](size_t id, const std::error_code &ec) -> void {
         HandleError(ec);
         if (is_client_connected_) {
+          ClientMessage::ServerProxySocketClosed msg{id};
           auto err =
-              message_writer_.Write(ClientMessage::MessageEnum::kDataTransfer,
-                                    ClientMessage::ServerProxySocketClosed{id});
+              message_writer_.Write(ClientMessage::MessageEnum::kDataTransfer,msg);
           if (err) OnClientSocketError(err);
         }
       });

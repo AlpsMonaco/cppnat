@@ -23,7 +23,7 @@ struct MessageSize {
 
 template <typename T>
 struct MessageSize<T, decltype(std::declval<T>().Size(), void())> {
-  static size_t Get(const T &t) { return const_cast<T &>(t).Size() }
+  static size_t Get(const T &t) { return const_cast<T &>(t).Size(); }
 };
 
 using Message = Protocol::Header;
@@ -35,9 +35,9 @@ class MessageWriter {
   ~MessageWriter();
 
   template <typename CmdType, typename T>
-  std::error_code Write(CmdType cmd, const T &t) {
-    static_assert<IsMessageType<T>::value,
-                  "message must inherit cppnat::Message">;
+  std::error_code Write(CmdType cmd, T &t) {
+    static_assert(IsMessageType<T>::value,
+                  "message must inherit cppnat::Message");
     t.cmd = static_cast<Protocol::Cmd>(cmd);
     t.packet_size = MessageSize<T>::Get(t);
     std::error_code ec;
@@ -58,7 +58,13 @@ class MessageHandler {
   ~MessageHandler();
 
   template <Protocol::Cmd cmd, typename T>
-  void Bind(const std::function<void(const T &, MessageWriter &)> &);
+  void Bind(const std::function<void(const T &, MessageWriter &)> &callback) {
+    callback_map_[cmd] = [callback](const char *raw_data,
+                                    MessageWriter &writer) -> void {
+      callback(*reinterpret_cast<const T *>(raw_data), writer);
+    };
+  }
+
   void Handle(Protocol::Cmd, const char *, SocketPtr socket_ptr);
 
   void Handle(Protocol::Cmd, const char *, SocketPtr socket_ptr) const;

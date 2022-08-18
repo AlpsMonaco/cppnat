@@ -11,14 +11,11 @@ MessageHandler::MessageHandler() : callback_map_() {}
 
 MessageHandler::~MessageHandler() {}
 
-template <Protocol::Cmd cmd, typename T>
-void MessageHandler::Bind(
-    const std::function<void(const T &t, MessageWriter &writer)> &callback) {
-  callback_map_[cmd] = [callback](const char *raw_data,
-                                  MessageWriter &writer) -> void {
-    callback(*reinterpret_cast<const T *>(raw_data), writer)
-  };
-}
+// template <Protocol::Cmd cmd, typename T>
+// void MessageHandler::Bind(
+//     const std::function<void(const T &t, MessageWriter &writer)> &callback) {
+
+// }
 
 void MessageHandler::Handle(Protocol::Cmd cmd, const char *data,
                             SocketPtr socket_ptr) {

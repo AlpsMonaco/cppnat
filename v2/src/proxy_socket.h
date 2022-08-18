@@ -8,7 +8,7 @@ NAMESPACE_CPPNAT_START
 
 class ProxySocket : public std::enable_shared_from_this<ProxySocket> {
  public:
-  using OnRecvCallback = std::function<void(const ProxyData &)>;
+  using OnRecvCallback = std::function<void(ProxyData &)>;
   using OnReadErrorCallback =
       std::function<void(size_t, const std::error_code &)>;
   using OnWriteErrorCallback =
