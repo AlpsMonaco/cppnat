@@ -58,11 +58,8 @@ class DynamicBuffer {
   }
 
   void Write(char *src, size_t size) { memcpy(p, src, size); }
-
   ~DynamicBuffer() { delete[] p; }
-
   size_t Size() { return buffer_size_; }
-
   char *Get() { return p; }
 
  protected:
