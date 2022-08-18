@@ -137,6 +137,25 @@ protected:
 								} });
 	}
 
+	void AcceptForClient()
+	{
+		std::shared_ptr<asio::ip::tcp::socket> pSocket =
+			std::make_shared<asio::ip::tcp::socket>(ios_);
+		acceptor_.async_accept(*pSocket,
+							   [this, pSocket](const boost::system::error_code &ec) -> void
+							   {
+								   if (ec)
+								   {
+									   LOG_ERROR(std::string("accept error:") + ec.message());
+									   return;
+								   }
+								   std::shared_ptr<asio::deadline_timer> pTimer =
+									   std::make_shared<asio::deadline_timer>(ios_);
+									pTimer->expires_from_now(boost::posix_time::seconds(100));
+									pTimer->async_wait([]()->void{});
+							   });
+	}
+
 	bool WaitForClient()
 	{
 		LOG_INFO("waiting for client");
