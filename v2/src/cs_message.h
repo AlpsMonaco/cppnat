@@ -5,61 +5,64 @@
 
 NAMESPACE_CPPNAT_START
 
-enum class MessageEnum : Protocol::Cmd
-{
-    kNewProxy = 1000,
-    kNewProxyResult,
-    kSocketClosed,
-    kDataTransfer
+enum class StatusCode : std::uint16_t { kSuccess, kError };
+
+class ServerMessage {
+ public:
+  enum MessageEnum {
+    kNewProxyResult = 10001,
+    kClientProxySocketClosed,
+    kDataTransfer,
+  };
+
+  struct NewProxyResult : public Message {
+    size_t id;
+    StatusCode code;
+  };
+
+  struct ClientProxySocketClosed : public Message {
+    size_t id;
+
+    ClientProxySocketClosed(size_t id) : id(id) {}
+  };
+
+  struct DataTransfer : public Message {
+    size_t id;
+    size_t data_size;
+    static constexpr size_t body_meta_size = sizeof(id) + sizeof(data_size);
+    static constexpr size_t writable_size =
+        Protocol::max_size - Protocol::header_size - body_meta_size;
+    char data[writable_size];
+
+    size_t Size() { return body_meta_size + data_size; }
+
+    DynamicBufferPtr Copy() {
+      auto buffer_ptr = std::make_shared<DynamicBuffer>(data_size);
+      buffer_ptr->Write(data, data_size);
+      return buffer_ptr;
+    }
+
+    DynamicBufferPtr Copy() const {
+      return const_cast<DataTransfer &>(*this).Copy();
+    }
+  };
 };
 
-enum class StatusCode : std::uint16_t
-{
-    kSuccess,
-    kError
-};
+class ClientMessage {
+ public:
+  enum MessageEnum {
+    kNewProxy = 10001,
+    kServerProxySocketClosed,
+    kDataTransfer,
+  };
 
-class ServerMessage
-{
-public:
-    struct NewProxy : public Message
-    {
-        size_t id;
-    };
+  struct NewProxy : public Message {
+    size_t id;
+  };
 
-    struct NewProxyResult : public Message
-    {
-        size_t id;
-        StatusCode code;
-    };
-
-    struct ServerProxySocketClosed : public Message
-    {
-        size_t id;
-    };
-
-    struct DataTransfer : public Message
-    {
-        size_t id;
-        size_t data_size;
-        static constexpr size_t body_meta_size = sizeof(id) + sizeof(data_size);
-        static constexpr size_t writable_size = Protocol::max_size - Protocol::header_size - body_meta_size;
-        char data[writable_size];
-
-        size_t Size()
-        {
-            return body_meta_size + data_size;
-        }
-    };
-};
-
-class ClientMessage
-{
-public:
-    using NewProxy = ServerMessage::NewProxy;
-    using NewProxyResult = ServerMessage::NewProxyResult;
-    using ClientProxySocketClosed = ServerMessage::ServerProxySocketClosed;
-    using DataTransfer = ServerMessage::DataTransfer;
+  using NewProxyResult = ServerMessage::NewProxyResult;
+  using ServerProxySocketClosed = ServerMessage::ClientProxySocketClosed;
+  using DataTransfer = ServerMessage::DataTransfer;
 };
 
 using ProxyData = ClientMessage::DataTransfer;

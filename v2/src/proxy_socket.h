@@ -1,31 +1,39 @@
 #ifndef __CPP_NAT_PROXY_SOCKET_H__
 #define __CPP_NAT_PROXY_SOCKET_H__
 
-#include "prefix.h"
 #include "cs_message.h"
+#include "prefix.h"
 
 NAMESPACE_CPPNAT_START
 
-class ProxySocket
-{
-public:
-    ProxySocket(SocketPtr socket_ptr, size_t id);
-    ~ProxySocket();
+class ProxySocket : public std::enable_shared_from_this<ProxySocket> {
+ public:
+  using OnRecvCallback = std::function<void(const ProxyData &)>;
+  using OnReadErrorCallback =
+      std::function<void(size_t, const std::error_code &)>;
+  using OnWriteErrorCallback =
+      std::function<void(size_t, const std::error_code &)>;
 
-protected:
-    SocketPtr socket_ptr_;
-    ProxyData proxy_data_;
+  ProxySocket(size_t id, SocketPtr socket_ptr);
+  ~ProxySocket();
+
+  void ReadOnce();
+  void Write(DynamicBufferPtr);
+  void Close();
+
+  void SetOnRecv(const OnRecvCallback &);
+  void SetOnReadError(const OnReadErrorCallback &);
+  void SetOnWriteError(const OnWriteErrorCallback &);
+
+ protected:
+  SocketPtr socket_ptr_;
+  ProxyData proxy_data_;
+  OnRecvCallback on_recv_;
+  OnReadErrorCallback on_read_error_;
+  OnWriteErrorCallback on_write_error_;
 };
 
-class ProxySocketMgr
-{
-public:
-    ProxySocketMgr();
-    ~ProxySocketMgr();
-
-protected:
-    std::map<size_t, ProxySocket> proxy_socket_map_;
-};
+using ProxySocketPtr = std::shared_ptr<ProxySocket>;
 
 NAMESPACE_CPPNAT_END
 
