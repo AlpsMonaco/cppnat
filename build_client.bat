@@ -1,7 +1,10 @@
 @ECHO OFF
 
+echo compiling bin\client.exe
+
 cl.exe ^
 /EHsc ^
+/nologo ^
 /Zi ^
 /MD ^
 /Ox ^
@@ -16,4 +19,7 @@ src\log.cpp ^
 src\client\main.cpp ^
 /Ithird_party\asio\asio\include ^
 /Ithird_party\spdlog\include ^
-/Ithird_party\jsonserializer\include ^
+/Ithird_party\jsonserializer\include
+
+if %ERRORLEVEL% EQU 0 echo compile bin\client.exe successfully!
+pause
