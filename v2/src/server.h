@@ -21,8 +21,8 @@ class Server {
   bool is_client_connected_;
   MessageHandler message_handler_;
   MessageWriter message_writer_;
-  size_t socket_id_;
-  std::map<size_t, ProxySocketPtr> proxy_socket_map_;
+  std::uint16_t socket_id_;
+  std::map<std::uint16_t, ProxySocketPtr> proxy_socket_map_;
   SocketPtr client_socket_ptr_;
 
   void Handshake(SocketPtr socket_ptr);
@@ -30,7 +30,7 @@ class Server {
   void AcceptClient(SocketPtr socket_ptr);
   void OnClientSocketError(const std::error_code &ec);
   void InitMessageHandler();
-  void BeginProxy(size_t id);
+  void BeginProxy(std::uint16_t id);
   void AcceptSocket();
 };
 

@@ -30,6 +30,7 @@ class Client {
   void BeginMessageLoop();
   void InitMessageHandler();
   void OnServerSocketClosed(const std::error_code &ec);
+  void BeginProxy(std::uint16_t id);
 };
 
 NAMESPACE_CPPNAT_END

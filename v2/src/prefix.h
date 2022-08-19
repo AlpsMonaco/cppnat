@@ -74,10 +74,6 @@ inline SocketPtr CreateSocket(asio::io_service &ios) {
   return std::make_shared<asio::ip::tcp::socket>(ios);
 }
 
-inline void HandleError(const asio::error_code &ec) {
-  std::cerr << ec << std::endl;
-}
-
 using TimerPtr = std::shared_ptr<asio::steady_timer>;
 inline TimerPtr CreateTimer(asio::io_service &ios) {
   return std::make_shared<asio::steady_timer>(ios);

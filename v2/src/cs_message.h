@@ -16,19 +16,19 @@ class ServerMessage {
   };
 
   struct NewProxyResult : public Message {
-    size_t id;
+    std::uint16_t id;
     StatusCode code;
   };
 
   struct ClientProxySocketClosed : public Message {
-    size_t id;
+    std::uint16_t id;
 
     ClientProxySocketClosed(size_t id) : id(id) {}
   };
 
   struct DataTransfer : public Message {
-    size_t id;
-    size_t data_size;
+    std::uint16_t id;
+    std::uint16_t data_size;
     static constexpr size_t body_meta_size = sizeof(id) + sizeof(data_size);
     static constexpr size_t writable_size =
         Protocol::max_size - Protocol::header_size - body_meta_size;

@@ -4,18 +4,10 @@ NAMESPACE_CPPNAT_START
 
 MessageWriter::MessageWriter(SocketPtr socket_ptr, ErrorHandler error_handler)
     : socket_ptr_(socket_ptr), error_handler_(error_handler) {}
-
 MessageWriter::~MessageWriter() {}
 
 MessageHandler::MessageHandler() : callback_map_() {}
-
 MessageHandler::~MessageHandler() {}
-
-// template <Protocol::Cmd cmd, typename T>
-// void MessageHandler::Bind(
-//     const std::function<void(const T &t, MessageWriter &writer)> &callback) {
-
-// }
 
 void MessageHandler::Handle(Protocol::Cmd cmd, const char *data,
                             SocketPtr socket_ptr) {

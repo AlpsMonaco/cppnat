@@ -92,6 +92,9 @@
         "memory_resource": "cpp",
         "string_view": "cpp",
         "ranges": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "bitset": "cpp",
+        "regex": "cpp",
+        "span": "cpp"
     }
 }

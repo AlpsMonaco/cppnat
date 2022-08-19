@@ -13,8 +13,10 @@
 				"${workspaceFolder}/src/proxy_socket.cpp",
 				"${workspaceFolder}/src/server.cpp",
 				"${workspaceFolder}/src/session.cpp",
+				"${workspaceFolder}/src/log.cpp",
 				"${workspaceFolder}/src/server/main.cpp",
 				"-I${workspaceFolder}/third_party/asio/asio/include",
+				"-I${workspaceFolder}/third_party/spdlog/include/",
 				"-o",
 				"${workspaceFolder}/bin/server",
 				"-lpthread"
@@ -42,8 +44,10 @@
 				"${workspaceFolder}/src/proxy_socket.cpp",
 				"${workspaceFolder}/src/client.cpp",
 				"${workspaceFolder}/src/session.cpp",
+				"${workspaceFolder}/src/log.cpp",
 				"${workspaceFolder}/src/client/main.cpp",
 				"-I${workspaceFolder}/third_party/asio/asio/include",
+				"-I${workspaceFolder}/third_party/spdlog/include/",
 				"-o",
 				"${workspaceFolder}/bin/client",
 				"-lpthread"

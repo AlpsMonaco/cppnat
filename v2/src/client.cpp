@@ -1,6 +1,7 @@
 #include "client.h"
 
 #include "handshake.h"
+#include "log.h"
 
 NAMESPACE_CPPNAT_START
 
@@ -30,12 +31,17 @@ void Client::Stop() {
 }
 
 void Client::Start() {
+  Log::Info("server {}:{},proxy to {}:{}",
+            server_endpoint_.address().to_string(), server_endpoint_.port(),
+            proxy_endpoint_.address().to_string(), proxy_endpoint_.port());
   InitMessageHandler();
   server_socket_ptr_ = std::make_shared<asio::ip::tcp::socket>(ios_);
+  Log::Info("connection to server {}:{}",
+            server_endpoint_.address().to_string(), server_endpoint_.port());
   server_socket_ptr_->async_connect(server_endpoint_,
                                     [&](const std::error_code &ec) -> void {
                                       if (ec) {
-                                        HandleError(ec);
+                                        HandleErrorCode(ec);
                                         return;
                                       }
                                       Handshake();
@@ -44,6 +50,7 @@ void Client::Start() {
 }
 
 void Client::BeginMessageLoop() {
+  Log::Info("begin message loop");
   auto session = std::make_shared<Session>(
       server_socket_ptr_, message_handler_,
       [&](const std::error_code &ec) -> void { OnServerSocketClosed(ec); });
@@ -52,30 +59,57 @@ void Client::BeginMessageLoop() {
 }
 
 void Client::OnServerSocketClosed(const std::error_code &ec) {
-  HandleError(ec);
-  for (auto &it : proxy_socket_map_) {
-    it.second->Close();
-    proxy_socket_map_.erase(it.first);
-  }
+  HandleErrorCode(ec);
+}
+
+void Client::BeginProxy(std::uint16_t id) {
+  auto proxy_socket_ptr = proxy_socket_map_[id];
+  proxy_socket_ptr->SetOnRecv([proxy_socket_ptr,
+                               this](ProxyData &proxy_data) -> void {
+    auto ec = message_writer_.Write(ServerMessage::kDataTransfer, proxy_data);
+    if (ec) {
+      OnServerSocketClosed(ec);
+      return;
+    }
+    proxy_socket_ptr->ReadOnce();
+  });
+  proxy_socket_ptr->SetOnReadError(
+      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+        HandleErrorCode(ec);
+        ServerMessage::ClientProxySocketClosed msg{id};
+        auto err =
+            message_writer_.Write(ServerMessage::kClientProxySocketClosed, msg);
+        if (err) {
+          OnServerSocketClosed(err);
+        }
+      });
+  proxy_socket_ptr->SetOnWriteError(
+      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+        HandleErrorCode(ec);
+      });
+  proxy_socket_ptr->ReadOnce();
 }
 
 void Client::InitMessageHandler() {
+  Log::Info("initialize message handler");
   message_handler_.Bind<ClientMessage::kNewProxy, ClientMessage::NewProxy>(
       [&](const ClientMessage::NewProxy &msg, MessageWriter &writer) -> void {
         auto socket_ptr = std::make_shared<asio::ip::tcp::socket>(ios_);
-        size_t id = msg.id;
+        std::uint16_t id = msg.id;
+        Log::Info("new proxy request,id:{}", id);
         socket_ptr->async_connect(
             proxy_endpoint_,
             [this, socket_ptr, id](const std::error_code &ec) -> void {
               ServerMessage::NewProxyResult result;
               result.id = id;
               if (ec) {
-                HandleError(ec);
+                HandleErrorCode(ec);
                 result.code = StatusCode::kError;
               } else {
                 proxy_socket_map_[id] =
                     std::make_shared<ProxySocket>(id, socket_ptr);
                 result.code = StatusCode::kSuccess;
+                BeginProxy(id);
               }
               auto err =
                   message_writer_.Write(ServerMessage::kNewProxyResult, result);
@@ -99,13 +133,14 @@ void Client::InitMessageHandler() {
 }
 
 void Client::Handshake() {
+  Log::Info("handshaking with server");
   asio::async_write(
       *server_socket_ptr_,
       asio::buffer(Handshake::server_message.data(),
                    Handshake::server_message.size()),
       [&](const std::error_code &ec, size_t) -> void {
         if (ec) {
-          HandleError(ec);
+          HandleErrorCode(ec);
           return;
         }
         std::shared_ptr<BufferSize<64>> buffer_ptr =
@@ -115,12 +150,14 @@ void Client::Handshake() {
             asio::buffer(buffer_ptr->Get(), Handshake::client_message.size()),
             [&, buffer_ptr](const std::error_code &ec, size_t length) -> void {
               if (ec) {
-                HandleError(ec);
+                HandleErrorCode(ec);
                 return;
               }
-              if (std::string_view(buffer_ptr->Get(), length) ==
-                  Handshake::client_message) {
+              std::string_view recv_data(buffer_ptr->Get(), length);
+              Log::Bytes(recv_data, "handshake recv");
+              if (recv_data == Handshake::client_message) {
                 BeginMessageLoop();
+                Log::Info("handshake successfully");
               }
             });
       });

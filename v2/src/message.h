@@ -1,6 +1,7 @@
 #ifndef __CPPNAT_MESSAGE_H__
 #define __CPPNAT_MESSAGE_H__
 
+#include "log.h"
 #include "prefix.h"
 
 NAMESPACE_CPPNAT_START
@@ -23,7 +24,7 @@ struct MessageSize {
 
 template <typename T>
 struct MessageSize<T, decltype(std::declval<T>().Size(), void())> {
-  static size_t Get(const T &t) { return const_cast<T &>(t).Size(); }
+  static size_t Get(const T &t) { return const_cast<T &>(t).Size() + Protocol::header_size; }
 };
 
 using Message = Protocol::Header;
@@ -38,12 +39,12 @@ class MessageWriter {
   std::error_code Write(CmdType cmd, T &t) {
     static_assert(IsMessageType<T>::value,
                   "message must inherit cppnat::Message");
-    t.cmd = static_cast<Protocol::Cmd>(cmd);
+    t.cmd = cmd;
     t.packet_size = MessageSize<T>::Get(t);
     std::error_code ec;
-    asio::write(*socket_ptr_,
-                asio::buffer(reinterpret_cast<const char *>(&t), t.packet_size),
-                ec);
+    const char *data = reinterpret_cast<const char *>(&t);
+    Log::Bytes(data, t.packet_size, "socket write event");
+    asio::write(*socket_ptr_, asio::buffer(data, t.packet_size), ec);
     return ec;
   }
 

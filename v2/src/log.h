@@ -11,9 +11,7 @@ NAMESPACE_CPPNAT_START
 
 class Log {
  public:
-  static void SetLogLevel(spdlog::level::level_enum level) {
-    Ins().LogLevel(level);
-  };
+  static void SetLogLevel(spdlog::level::level_enum level);
 
   template <typename... Args>
   static void Error(spdlog::format_string_t<Args...> fmt, Args&&... args) {
@@ -27,27 +25,38 @@ class Log {
     spdlog::info(fmt, std::forward<Args>(args)...);
   }
 
+  static void Bytes(const std::string_view& sv,
+                    const std::string& comment = "") {
+    Ins().log_ptr_->debug("{} size:{} {}", comment, sv.size(),
+                          spdlog::to_hex(sv.begin(), sv.end()));
+  }
+
+  static void Bytes(const char* bytes, size_t size,
+                    const std::string& comment = "") {
+    Bytes(std::string_view(bytes, size), comment);
+  }
+
+  static void SocketEvent(const std::string& event, SocketPtr socket_ptr) {
+    Ins().log_ptr_->info("{} {}:{}", event,
+                         socket_ptr->remote_endpoint().address().to_string(),
+                         socket_ptr->remote_endpoint().port());
+  }
+
+  static void SocketErrorEvent(const std::string& event, SocketPtr socket_ptr) {
+    Ins().log_ptr_->error("{} {}:{}", event,
+                          socket_ptr->remote_endpoint().address().to_string(),
+                          socket_ptr->remote_endpoint().port());
+  }
+
  protected:
   using LogPtr = std::shared_ptr<spdlog::logger>;
-  Log() : log_ptr_(spdlog::basic_logger_mt("cppnat", "cppnat.log")) {
-    log_ptr_->set_level(spdlog::level::debug);
-    log_ptr_->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-    log_ptr_->flush_on(spdlog::level::debug);
-    spdlog::set_level(spdlog::level::debug);
-  }
-
-  static Log& Ins() {
-    Log logger;
-    return logger;
-  }
-
-  void LogLevel(spdlog::level::level_enum level) {
-    log_ptr_->set_level(level);
-    spdlog::set_level(level);
-  }
-
+  Log();
+  static Log& Ins();
+  void LogLevel(spdlog::level::level_enum level);
   LogPtr log_ptr_;
 };
+
+void HandleErrorCode(const std::error_code&);
 
 NAMESPACE_CPPNAT_END
 

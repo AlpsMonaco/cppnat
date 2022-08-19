@@ -2,6 +2,7 @@
 
 #include "cs_message.h"
 #include "handshake.h"
+#include "log.h"
 
 NAMESPACE_CPPNAT_START
 
@@ -19,6 +20,7 @@ Server::Server(const std::string &listen_addr, std::uint16_t port)
 Server::~Server() { Stop(); }
 
 void Server::InitMessageHandler() {
+  Log::Info("initialize message handler");
   message_handler_
       .Bind<ServerMessage::kNewProxyResult, ServerMessage::NewProxyResult>(
           [&](const ServerMessage::NewProxyResult &msg,
@@ -59,6 +61,7 @@ void Server::Stop() {
 void Server::Start() {
   InitMessageHandler();
   AcceptSocket();
+  Log::Info("wait for cppnat client");
   ios_.run();
 }
 
@@ -67,7 +70,7 @@ void Server::AcceptSocket() {
   acceptor_.async_accept(
       *socket_ptr, [socket_ptr, this](const asio::error_code &ec) -> void {
         if (ec) {
-          HandleError(ec);
+          HandleErrorCode(ec);
           return;
         }
         if (is_client_connected_)
@@ -79,17 +82,23 @@ void Server::AcceptSocket() {
 }
 
 void Server::Proxy(SocketPtr socket_ptr) {
+  Log::Info("ready to proxy {}:{}",
+            socket_ptr->remote_endpoint().address().to_string(),
+            socket_ptr->remote_endpoint().port());
   ClientMessage::NewProxy msg;
   msg.id = socket_id_++;
-  proxy_socket_map_[msg.id] = std::make_shared<ProxySocket>(msg.id, socket_ptr);
-  message_writer_.Write(ClientMessage::MessageEnum::kNewProxy, msg);
+  Log::Info("new proxy id:{}", msg.id);
+  proxy_socket_map_.emplace(msg.id,
+                            std::make_shared<ProxySocket>(msg.id, socket_ptr));
+  message_writer_.Write(ClientMessage::kNewProxy, msg);
 }
 
-void Server::BeginProxy(size_t id) {
+void Server::BeginProxy(std::uint16_t id) {
+  Log::Info("id:{},begin proxy", id);
   auto proxy_socket_ptr = proxy_socket_map_[id];
-  proxy_socket_ptr->SetOnRecv([&](ProxyData &proxy_data) -> void {
-    auto ec = message_writer_.Write(ClientMessage::MessageEnum::kDataTransfer,
-                                    proxy_data);
+  proxy_socket_ptr->SetOnRecv([proxy_socket_ptr,
+                               this](ProxyData &proxy_data) -> void {
+    auto ec = message_writer_.Write(ClientMessage::kDataTransfer, proxy_data);
     if (ec) {
       OnClientSocketError(ec);
       return;
@@ -97,21 +106,25 @@ void Server::BeginProxy(size_t id) {
     proxy_socket_ptr->ReadOnce();
   });
   proxy_socket_ptr->SetOnReadError(
-      [&](size_t id, const std::error_code &ec) -> void {
-        HandleError(ec);
+      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+        HandleErrorCode(ec);
         if (is_client_connected_) {
           ClientMessage::ServerProxySocketClosed msg{id};
-          auto err =
-              message_writer_.Write(ClientMessage::MessageEnum::kDataTransfer,msg);
+          auto err = message_writer_.Write(ClientMessage::kDataTransfer, msg);
           if (err) OnClientSocketError(err);
         }
       });
   proxy_socket_ptr->SetOnWriteError(
-      [&](size_t id, const std::error_code &ec) -> void { HandleError(ec); });
+      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+        HandleErrorCode(ec);
+      });
   proxy_socket_ptr->ReadOnce();
 }
 
 void Server::Handshake(SocketPtr socket_ptr) {
+  Log::Info("handshaking with {}:{}",
+            socket_ptr->remote_endpoint().address().to_string(),
+            socket_ptr->remote_endpoint().port());
   TimerPtr timer_ptr = CreateTimer(ios_);
   timer_ptr->expires_from_now(std::chrono::seconds(10));
   timer_ptr->async_wait(
@@ -131,13 +144,12 @@ void Server::Handshake(SocketPtr socket_ptr) {
           return;
         }
         if (ec) {
-          HandleError(ec);
+          HandleErrorCode(ec);
           timer_ptr->cancel();
           return;
         }
-        if (std::string_view(buffer_ptr->Get(),
-                             Handshake::server_message.size()) !=
-            Handshake::server_message) {
+        std::string_view recv_data(buffer_ptr->Get(), length);
+        if (recv_data != Handshake::server_message) {
           timer_ptr->cancel();
           socket_ptr->close();
           return;
@@ -153,7 +165,7 @@ void Server::Handshake(SocketPtr socket_ptr) {
                               return;
                             }
                             if (ec) {
-                              HandleError(ec);
+                              HandleErrorCode(ec);
                               timer_ptr->cancel();
                               socket_ptr->close();
                               return;
@@ -166,15 +178,14 @@ void Server::Handshake(SocketPtr socket_ptr) {
 }
 
 void Server::OnClientSocketError(const std::error_code &ec) {
-  HandleError(ec);
-  for (auto &it : proxy_socket_map_) {
-    it.second->Close();
-    proxy_socket_map_.erase(it.first);
-  }
+  Log::Error("lost connection with client {} {}", ec.value(), ec.message());
   is_client_connected_ = false;
 }
 
 void Server::AcceptClient(SocketPtr socket_ptr) {
+  Log::Info("accept client from {}:{}",
+            socket_ptr->remote_endpoint().address().to_string(),
+            socket_ptr->remote_endpoint().port());
   auto session = std::make_shared<Session>(
       socket_ptr, message_handler_,
       [this](const std::error_code &ec) -> void { OnClientSocketError(ec); });

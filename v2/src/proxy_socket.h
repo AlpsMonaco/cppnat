@@ -10,11 +10,11 @@ class ProxySocket : public std::enable_shared_from_this<ProxySocket> {
  public:
   using OnRecvCallback = std::function<void(ProxyData &)>;
   using OnReadErrorCallback =
-      std::function<void(size_t, const std::error_code &)>;
+      std::function<void(std::uint16_t, const std::error_code &)>;
   using OnWriteErrorCallback =
-      std::function<void(size_t, const std::error_code &)>;
+      std::function<void(std::uint16_t, const std::error_code &)>;
 
-  ProxySocket(size_t id, SocketPtr socket_ptr);
+  ProxySocket(std::uint16_t id, SocketPtr socket_ptr);
   ~ProxySocket();
 
   void ReadOnce();

@@ -2,7 +2,7 @@
 
 NAMESPACE_CPPNAT_START
 
-ProxySocket::ProxySocket(size_t id, SocketPtr socket_ptr)
+ProxySocket::ProxySocket(std::uint16_t id, SocketPtr socket_ptr)
     : proxy_data_(),
       socket_ptr_(socket_ptr),
       on_recv_(),
@@ -23,6 +23,7 @@ void ProxySocket::ReadOnce() {
           on_read_error_(proxy_data_.id, ec);
           return;
         }
+        Log::Bytes(proxy_data_.data, length, "recv from proxy data");
         proxy_data_.data_size = length;
         on_recv_(proxy_data_);
       });
@@ -42,6 +43,7 @@ void ProxySocket::SetOnWriteError(const OnWriteErrorCallback &callback) {
 
 void ProxySocket::Write(DynamicBufferPtr buffer_ptr) {
   auto self(shared_from_this());
+  Log::Bytes(buffer_ptr->Get(), buffer_ptr->Size(), "write to proxy socket");
   asio::async_write(
       *socket_ptr_, asio::buffer(buffer_ptr->Get(), buffer_ptr->Size()),
       [buffer_ptr, self, this](const std::error_code &ec, size_t) -> void {

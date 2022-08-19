@@ -26,6 +26,7 @@ void Session::MessageLoop() {
           error_handler_(ec);
           return;
         }
+        Log::Bytes(buffer_ + read_size_, length, "socket read event");
         read_size_ += length;
         ParseBuffer();
         MessageLoop();
@@ -71,6 +72,7 @@ void Session::ParseExtraBuffer() {
 }
 
 void Session::HandleBuffer(const Protocol::Header &header, const char *body) {
+  Log::Bytes(body, header.packet_size, "handle buffer");
   message_handler_.Handle(header.cmd, body, socket_ptr_);
 }
 
