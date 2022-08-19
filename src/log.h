@@ -1,161 +1,64 @@
 #ifndef __CPP_NAT_LOG_H__
 #define __CPP_NAT_LOG_H__
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
+
 #include <spdlog/fmt/bin_to_hex.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
 
-namespace cppnat
-{
-#ifdef __NO_OUTPUT_TO_CONSOLE__
-#define PRINT_BYTES(msg, bytes, len) \
-    do                               \
-    {                                \
-    } while (0)
-#define PRINT_INFO(msg) \
-    do                  \
-    {                   \
-    } while (0)
-#define PRINT_ERROR(msg) \
-    do                   \
-    {                    \
-    } while (0)
-#define PRINT_WARN(msg) \
-    do                  \
-    {                   \
-    } while (0)
-#define PRINT_DEBUG(msg) \
-    do                   \
-    {                    \
-    } while (0)
-#define PRINT_TRACE(msg) \
-    do                   \
-    {                    \
-    } while (0)
-#define PRINT_CRITICAL(msg) \
-    do                      \
-    {                       \
-    } while (0)
-#else
-#define PRINT_BYTES(msg, sv)                                             \
-    do                                                                   \
-    {                                                                    \
-        spdlog::info("{}{}", msg, spdlog::to_hex(sv.begin(), sv.end())); \
-    } while (0)
+#include "prefix.h"
 
-#define PRINT_INFO(msg)    \
-    do                     \
-    {                      \
-        spdlog::info(msg); \
-    } while (0)
-#define PRINT_ERROR(msg)    \
-    do                      \
-    {                       \
-        spdlog::error(msg); \
-    } while (0)
-#define PRINT_WARN(msg)    \
-    do                     \
-    {                      \
-        spdlog::warn(msg); \
-    } while (0)
-#define PRINT_DEBUG(msg)    \
-    do                      \
-    {                       \
-        spdlog::debug(msg); \
-    } while (0)
-#define PRINT_TRACE(msg)    \
-    do                      \
-    {                       \
-        spdlog::trace(msg); \
-    } while (0)
-#define PRINT_CRITICAL(msg)    \
-    do                         \
-    {                          \
-        spdlog::critical(msg); \
-    } while (0)
-#endif
+NAMESPACE_CPPNAT_START
 
-    class Log
-    {
-    public:
-        using Logger = std::shared_ptr<spdlog::logger>;
+class Log {
+ public:
+  static void SetLogLevel(spdlog::level::level_enum level);
 
-        static Logger &Ins()
-        {
-            static Log log;
-            return log.pLogger_;
-        }
+  template <typename... Args>
+  static void Error(spdlog::format_string_t<Args...> fmt, Args&&... args) {
+    Ins().log_ptr_->error(fmt, std::forward<Args>(args)...);
+    spdlog::error(fmt, std::forward<Args>(args)...);
+  }
 
-        inline void Flush() { pLogger_->flush(); }
+  template <typename... Args>
+  static void Info(spdlog::format_string_t<Args...> fmt, Args&&... args) {
+    Ins().log_ptr_->info(fmt, std::forward<Args>(args)...);
+    spdlog::info(fmt, std::forward<Args>(args)...);
+  }
 
-    protected:
-        Log() : pLogger_(spdlog::basic_logger_mt("cppnat", "cppnat.log"))
-        {
-            pLogger_->set_level(spdlog::level::debug);
-            pLogger_->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-            pLogger_->flush_on(spdlog::level::debug);
-            spdlog::set_level(spdlog::level::debug);
-        }
-        ~Log() {}
+  static void Bytes(const std::string_view& sv,
+                    const std::string& comment = "") {
+    Ins().log_ptr_->debug("{} size:{} {}", comment, sv.size(),
+                          spdlog::to_hex(sv.begin(), sv.end()));
+  }
 
-        Logger pLogger_;
-    };
+  static void Bytes(const char* bytes, size_t size,
+                    const std::string& comment = "") {
+    Bytes(std::string_view(bytes, size), comment);
+  }
 
-#define LOG_BYTES(msg, arr, arr_length)                                            \
-    do                                                                             \
-    {                                                                              \
-        const auto &m = msg;                                                       \
-        std::string_view sv(arr, arr_length);                                      \
-        PRINT_BYTES(m, sv);                                                        \
-        cppnat::Log::Ins()->info("{}{}", m, spdlog::to_hex(sv.begin(), sv.end())); \
-    } while (0)
+  static void SocketEvent(const std::string& event, SocketPtr socket_ptr) {
+    Ins().log_ptr_->info("{} {}:{}", event,
+                         socket_ptr->remote_endpoint().address().to_string(),
+                         socket_ptr->remote_endpoint().port());
+  }
 
-#define LOG_INFO(message)            \
-    do                               \
-    {                                \
-        const auto &m = message;     \
-        PRINT_INFO(m);               \
-        cppnat::Log::Ins()->info(m); \
-    } while (0)
+  static void SocketErrorEvent(const std::string& event, SocketPtr socket_ptr,
+                               const std::error_code& ec) {
+    Ins().log_ptr_->error("{} {}:{} {}", event,
+                          socket_ptr->remote_endpoint().address().to_string(),
+                          socket_ptr->remote_endpoint().port(), ec.message());
+  }
 
-#define LOG_ERROR(message)            \
-    do                                \
-    {                                 \
-        const auto &m = message;      \
-        PRINT_ERROR(m);               \
-        cppnat::Log::Ins()->error(m); \
-    } while (0)
+ protected:
+  using LogPtr = std::shared_ptr<spdlog::logger>;
+  Log();
+  static Log& Ins();
+  void LogLevel(spdlog::level::level_enum level);
+  LogPtr log_ptr_;
+};
 
-#define LOG_WARN(message)            \
-    do                               \
-    {                                \
-        const auto &m = message;     \
-        PRINT_WARN(m);               \
-        cppnat::Log::Ins()->warn(m); \
-    } while (0)
+void HandleErrorCode(const std::error_code&);
 
-#define LOG_DEBUG(message)                                                                      \
-    do                                                                                          \
-    {                                                                                           \
-        const auto &m = std::string(__FILE__) + ":" + std::to_string(__LINE__) + " " + message; \
-        PRINT_DEBUG(m);                                                                         \
-        cppnat::Log::Ins()->debug(m);                                                           \
-    } while (0)
-
-#define LOG_TRACE(message)            \
-    do                                \
-    {                                 \
-        const auto &m = message;      \
-        PRINT_TRACE(m);               \
-        cppnat::Log::Ins()->trace(m); \
-    } while (0)
-
-#define LOG_CRITICAL(message)            \
-    do                                   \
-    {                                    \
-        const auto &m = message;         \
-        PRINT_CRITICAL(m);               \
-        cppnat::Log::Ins()->critical(m); \
-    } while (0)
-}
+NAMESPACE_CPPNAT_END
 
 #endif

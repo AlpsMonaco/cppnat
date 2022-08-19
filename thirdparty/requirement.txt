@@ -1,4 +1,0 @@
-include:
-boost/
-rapidjson/
-spdlog/

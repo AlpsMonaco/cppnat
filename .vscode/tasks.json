@@ -1,175 +1,67 @@
 {
-    "tasks": [
-        {
-            "type": "cppbuild",
-            "label": "release server (win)",
-            "command": "cl.exe",
-            "args": [
-                "/EHsc",
-                "/std:c++17",
-                "/I${workspaceRoot}/thirdparty/boost",
-                "/nologo",
-                "/D__CPP_NAT_BUILD_SERVER__",
-                "/MD",
-                "/D_WIN32_WINNT=0x0601",
-                "/DNDEBUG",
-                "/Ox",
-                "/Fe:",
-                "${workspaceFolder}\\bin\\server.exe",
-                "${workspaceFolder}\\src\\main.cpp",
-                "${workspaceFolder}\\src\\server\\server.cpp",
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}\\bin"
-            },
-            "problemMatcher": [
-                "$msCompile"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "detail": "调试器生成的任务。"
-        },
-        {
-            "type": "cppbuild",
-            "label": "release client (win)",
-            "command": "cl.exe",
-            "args": [
-                "/EHsc",
-                "/std:c++17",
-                "/I${workspaceRoot}/thirdparty/boost",
-                "/nologo",
-                "/MD",
-                "/D_WIN32_WINNT=0x0601",
-                "/DNDEBUG",
-                "/Ox",
-                "/Fe:",
-                "${workspaceFolder}\\bin\\client.exe",
-                "${workspaceFolder}\\src\\main.cpp",
-                "${workspaceFolder}\\src\\client\\client.cpp",
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}\\bin"
-            },
-            "problemMatcher": [
-                "$msCompile"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "detail": "调试器生成的任务。"
-        },
-        {
-            "type": "cppbuild",
-            "label": "build client (win)",
-            "command": "cl.exe",
-            "args": [
-                "/Zi",
-                "/EHsc",
-                "/std:c++17",
-                "/D_WIN32_WINNT=0x0601",
-                "/I${workspaceRoot}/thirdparty/boost",
-                "/nologo",
-                "/MDd",
-                "/Fe:",
-                "${workspaceFolder}\\bin\\client.exe",
-                "${workspaceFolder}\\src\\main.cpp",
-                "${workspaceFolder}\\src\\client\\client.cpp"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}\\bin"
-            },
-            "problemMatcher": [
-                "$msCompile"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "detail": "调试器生成的任务。"
-        },
-        {
-            "type": "cppbuild",
-            "label": "build server (win)",
-            "command": "cl.exe",
-            "args": [
-                "/Zi",
-                "/EHsc",
-                "/std:c++17",
-                "/D_WIN32_WINNT=0x0601",
-                "/D__CPP_NAT_BUILD_SERVER__",
-                "/I${workspaceRoot}/thirdparty/boost",
-                "/nologo",
-                "/MDd",
-                "/Fe:",
-                "${workspaceFolder}\\bin\\server.exe",
-                "${workspaceFolder}\\src\\main.cpp",
-                "${workspaceFolder}\\src\\server\\server.cpp",
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}\\bin"
-            },
-            "problemMatcher": [
-                "$msCompile"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "detail": "调试器生成的任务。"
-        },
-        {
-            "type": "cppbuild",
-            "label": "build server (linux)",
-            "command": "/usr/bin/g++",
-            "args": [
-                "-fdiagnostics-color=always",
-                "-I",
-                "/mnt/d/include",
-                "-std=c++17",
-                "-D",
-                "__CPP_NAT_BUILD_SERVER__",
-                "${workspaceFolder}/src/main.cpp",
-                "${workspaceFolder}/src/server/server.cpp",
-                "-o",
-                "${workspaceFolder}/bin/server",
-                "-pthread"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/bin"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": "build",
-            "detail": "编译器: /usr/bin/g++",
-        },
-        {
-            "type": "cppbuild",
-            "label": "build client (linux)",
-            "command": "/usr/bin/g++",
-            "args": [
-                "-fdiagnostics-color=always",
-                "-I",
-                "/mnt/d/include",
-                "-std=c++17",
-                "${workspaceFolder}/src/main.cpp",
-                "${workspaceFolder}/src/client/client.cpp",
-                "-o",
-                "${workspaceFolder}/bin/client",
-                "-pthread"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/bin"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": "build",
-            "detail": "编译器: /usr/bin/g++",
-        }
-    ],
-    "version": "2.0.0"
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "(gdb) build server",
+			"command": "/usr/bin/g++-10",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-g",
+				"-std=c++2a",
+				"${workspaceFolder}/src/message.cpp",
+				"${workspaceFolder}/src/proxy_socket.cpp",
+				"${workspaceFolder}/src/server.cpp",
+				"${workspaceFolder}/src/session.cpp",
+				"${workspaceFolder}/src/log.cpp",
+				"${workspaceFolder}/src/server/main.cpp",
+				"-I${workspaceFolder}/third_party/asio/asio/include",
+				"-I${workspaceFolder}/third_party/spdlog/include/",
+				"-o",
+				"${workspaceFolder}/bin/server",
+				"-lpthread"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/bin"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "cppbuild",
+			"label": "(gdb) build client",
+			"command": "/usr/bin/g++-10",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-g",
+				"-std=c++2a",
+				"${workspaceFolder}/src/message.cpp",
+				"${workspaceFolder}/src/proxy_socket.cpp",
+				"${workspaceFolder}/src/client.cpp",
+				"${workspaceFolder}/src/session.cpp",
+				"${workspaceFolder}/src/log.cpp",
+				"${workspaceFolder}/src/client/main.cpp",
+				"-I${workspaceFolder}/third_party/asio/asio/include",
+				"-I${workspaceFolder}/third_party/spdlog/include/",
+				"-o",
+				"${workspaceFolder}/bin/client",
+				"-lpthread"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/bin"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
 }

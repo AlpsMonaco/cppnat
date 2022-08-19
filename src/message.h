@@ -1,100 +1,80 @@
-#ifndef __CPP_NAT_MESSAGE_HPP__
-#define __CPP_NAT_MESSAGE_HPP
+#ifndef __CPPNAT_MESSAGE_H__
+#define __CPPNAT_MESSAGE_H__
 
-#include <map>
-#include <string_view>
-#include "util.h"
-#include "packet.h"
 #include "log.h"
+#include "prefix.h"
 
-namespace cppnat
-{
-	enum class MessageCmd : uint16_t
-	{
-		CMD_Echo = 0x0100,
+NAMESPACE_CPPNAT_START
 
-		CMD_RequestNewConn = 0x0201,
-		CMD_AcceptNewConn,
-		CMD_RejectNewConn,
-		CMD_DataTransfer,
-		CMD_ConnClosed,
-	};
+template <typename T, typename = void>
+struct IsMessageType {
+  static constexpr bool value = false;
+};
 
-	constexpr size_t kBufferSize = 65535;
-	using Protocol = PacketProtocol<uint16_t, MessageCmd, kBufferSize>;
-	using PacketReader = PacketReadBuffer<Protocol>;
-	using PacketWriter = PacketWriteBuffer<Protocol>;
-	using Packet = typename PacketWriter::PacketType;
-	using ConstPacket = const typename PacketReader::PacketType;
+template <typename T>
+struct IsMessageType<T, decltype(std::declval<T>().packet_size,
+                                 std::declval<T>().cmd, void())> {
+  static constexpr bool value = true;
+};
 
-	class Msg
-	{
-	public:
-		struct NewConnAccept
-		{
-			size_t id;
-		};
+template <typename T, typename = void>
+struct MessageSize {
+  static size_t Get(const T &t) { return sizeof(T); }
+};
 
-		struct AcceptNewConn
-		{
-			size_t id;
-		};
+template <typename T>
+struct MessageSize<T, decltype(std::declval<T>().Size(), void())> {
+  static size_t Get(const T &t) { return const_cast<T &>(t).Size() + Protocol::header_size; }
+};
 
-		struct RejectNewConn
-		{
-			size_t id;
-		};
+using Message = Protocol::Header;
 
-		struct DataTransfer
-		{
-			static constexpr size_t kDataTransferHeaderSize = sizeof(size_t) + sizeof(size_t);
-			static constexpr size_t kDataTransferSize = Protocol::BodySize - kDataTransferHeaderSize;
-			size_t id;
-			size_t size;
-			char data[kDataTransferSize];
-		};
+class MessageWriter {
+ public:
+  MessageWriter(SocketPtr socket_ptr = nullptr,
+                ErrorHandler error_handler = nullptr);
+  ~MessageWriter();
 
-		struct ConnClosed
-		{
-			size_t id;
-		};
-	};
+  template <typename CmdType, typename T>
+  std::error_code Write(CmdType cmd, T &t) {
+    static_assert(IsMessageType<T>::value,
+                  "message must inherit cppnat::Message");
+    t.cmd = cmd;
+    t.packet_size = MessageSize<T>::Get(t);
+    std::error_code ec;
+    const char *data = reinterpret_cast<const char *>(&t);
+    Log::Bytes(data, t.packet_size, "socket write event");
+    asio::write(*socket_ptr_, asio::buffer(data, t.packet_size), ec);
+    return ec;
+  }
 
-	class Handshake
-	{
-	public:
-		template <typename T>
-		static bool IsMatch(const char *data, size_t size) { return std::string_view(data, size) == T::dataView; }
+ protected:
+  SocketPtr socket_ptr_;
+  ErrorHandler error_handler_;
+};
 
-		template <typename T>
-		static const char *Data() { return T::data; }
+class MessageHandler {
+ public:
+  MessageHandler();
+  ~MessageHandler();
 
-		template <typename T>
-		static size_t Size() { return T::dataView.size(); }
+  template <Protocol::Cmd cmd, typename T>
+  void Bind(const std::function<void(const T &, MessageWriter &)> &callback) {
+    callback_map_[cmd] = [callback](const char *raw_data,
+                                    MessageWriter &writer) -> void {
+      callback(*reinterpret_cast<const T *>(raw_data), writer);
+    };
+  }
 
-		template <class T>
-		class Protocol
-		{
-		public:
-			static const char *Data() { return T::data; }
-			static size_t Size() { return T::dataView.size(); }
-			static bool IsMatch(const char *data, size_t size) { return std::string_view(data, size) == T::dataView; }
-		};
+  void Handle(Protocol::Cmd, const char *, SocketPtr socket_ptr);
 
-		struct VerifyClient
-		{
-			static constexpr char data[] = "CPP_NAT_CS_VERIFY_INFO_V0.0.1";
-			static constexpr std::string_view dataView = data;
-			static constexpr size_t size = dataView.size();
-		};
+  void Handle(Protocol::Cmd, const char *, SocketPtr socket_ptr) const;
 
-		struct ResponseOK
-		{
-			static constexpr char data[] = "1";
-			static constexpr std::string_view dataView = data;
-			static constexpr size_t size = dataView.size();
-		};
-	};
-}
+ protected:
+  std::map<Protocol::Cmd, std::function<void(const char *, MessageWriter &)> >
+      callback_map_;
+};
+
+NAMESPACE_CPPNAT_END
 
 #endif

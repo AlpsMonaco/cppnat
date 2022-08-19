@@ -3,20 +3,18 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
-                "/mnt/d/repository/boost"
+                "${workspaceFolder}/**"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/g++",
-            "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64"
+            "compilerPath": "/usr/bin/g++-10",
+            "cStandard": "gnu17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-gcc-x64"
         },
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**",
-                "${workspaceFolder}\\thirdparty\\boost"
+                "${workspaceFolder}/**"
             ],
             "defines": [
                 "_DEBUG",
@@ -26,7 +24,7 @@
             "windowsSdkVersion": "10.0.19041.0",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe",
             "cStandard": "c17",
-            "cppStandard": "c++17",
+            "cppStandard": "c++20",
             "intelliSenseMode": "windows-msvc-x64"
         }
     ],
