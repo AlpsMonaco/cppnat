@@ -1,6 +1,6 @@
 # cppnat
 
-writen in cpp,cppnat is a reverse proxy tool helps you expose your private IP and port and bind them onto a server with public IP,access your private service anywhere.
+writen in cpp,cppnat is a NAT reverse proxy tool (aslo known as a hole punching tool) helps you expose your private IP and port and bind them onto a server with public IP,access your private service anywhere.
 
 ## build
 1. Init git submodules in `thirt_party/`.
