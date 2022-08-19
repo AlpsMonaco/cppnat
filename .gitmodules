@@ -1,6 +1,6 @@
-[submodule "v2/third_party/asio"]
-	path = v2/third_party/asio
+[submodule "third_party/asio"]
+	path = third_party/asio
 	url = https://github.com/chriskohlhoff/asio
-[submodule "v2/third_party/spdlog"]
-	path = v2/third_party/spdlog
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
 	url = https://github.com/gabime/spdlog
