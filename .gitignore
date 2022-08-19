@@ -44,3 +44,5 @@ thirdparty/spdlog
 bin/*
 
 v2/bin/
+.vscode/settings.json
+.vscode/c_cpp_properties.json
