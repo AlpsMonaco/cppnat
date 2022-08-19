@@ -1,71 +1,51 @@
 # cppnat
 
-**cppnat is a tcp hole punching tool helps you to expose you service on private network.**  
+writen in cpp,cppnat is a reverse proxy tool helps you expose your private IP and port and bind them onto a server with public IP,access your private service anywhere.
+
+## build
+1. Init git submodules in `thirt_party/`.
+2. run `build_server.sh` and `build_client.sh` on linux os, requires at least `g++ 10`.  
+For Windows system with MSVC compiler `cl.exe` has installed,run `build_server.bat` and `build_client.bat`.
+3. If the compile is successful,you will have `server` and `client` in the `bin/` directory.
+
+## run
+There are `bin/server.json` and `bin/client.json` template config file in the `bin/` directory.Simply change them to satisfy you needs.
+
+## config
+
+### server
+`bin/server` is typically dispatched on a server with public ip.Every TCP connection to the ip and the port you have configured will redirect to nat client.  
+
+#### `server.json`
+```json
+{
+    "bind_ip": "127.0.0.1",
+    "bind_port": 54432
+}
+```
+There are only two keys in the config json file indicates on which ip and which port the nat server should bind.  
+
+
+### client
+`bin/client` is typically dispatched on a computer without a public ip but able to connect to the Internet with NAT.A client helps you expose you service 
+such as ssh or rdp in the computer to the Internet that you could access it anywhere.  
+
+#### `client.json`
+```json
+{
+    "server_ip": "127.0.0.1",
+    "server_port": 54432,
+    "proxy_ip": "127.0.0.1",
+    "proxy_port": 33123
+}
+```
+configure `server_ip` and `server_port` to a nat server's binded ip and binded port.  
+configure `proxy_ip` and `proxy_port` to you local private service.
+
+**Now you could access you private service anywhere**
+based on asio,this library performs well under high concurrency as well.  
 
 
 ## Project
 
-This project is written with Visual Studio Code.Project files are included as well.  
-We can open project directly via Visual Studio Code.  
-Third party requirements are listed on file ```thirdparty/requirement```.  
-There are no project construction tools currently.You may need to install these 
-lib youself.  
-The network lib is using boost asio which is very fast in most circumstance.  
-
-## Server
-
-### description
-Server is typically running on a server which has a public IP address.  
-Server will wait for Client handshaking firstly,after handshaking is done,  
-The rest connnections are considered users trying to connect the service  
-on the private network which is the same network that client is using.  
-
-### build
-For release version choose `resease server ({os_type}) from Visual Studio Code 'Tasks:Run Build Tasks'`  
-For debug version choose `build server ({os_type}) from Visual Studio Code 'Tasks:Run Build Tasks'`  
-
-
-### config
-`config.json` on the same cwd.
-```
-{
-    "server": {
-        "ip": "127.0.0.1",
-        "port": 9544
-    }
-}
-```
-server.ip indicates which ip to listen on.  
-server.port indicates which port to listen on.  
-
-
-## client
-
-### description
-Client is usually dispatched on the server which only has private network.  
-Client will retry connecting to server automatically if the connection to  
-server is failed.  
-
-### build
-For release version choose `resease client ({os_type}) from Visual Studio Code 'Tasks:Run Build Tasks'`  
-For debug version choose `build client ({os_type}) from Visual Studio Code 'Tasks:Run Build Tasks'`  
-
-
-### config
-`config.json` on the same cwd.
-```
-{
-    "server": {
-        "ip": "127.0.0.1",
-        "port": 9544
-    },
-    "proxy": {
-        "ip": "192.168.1.202",
-        "port": 33123
-    }
-}
-```
-server.ip indicates the server ip.  
-server.port indicates the server port.  
-proxy.ip indicates the ip client should connect to.  
-proxy.port indicates the port client should connect to.  
+This library is written with `Visual Studio Code`,you could only this project of root path and launch it directly.
