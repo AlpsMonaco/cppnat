@@ -53,13 +53,21 @@ void Client::BeginMessageLoop() {
   Log::Info("begin message loop");
   auto session = std::make_shared<Session>(
       server_socket_ptr_, message_handler_,
-      [&](const std::error_code &ec) -> void { OnServerSocketClosed(ec); });
+      [&](const std::error_code &ec) -> void { OnServerReadError(ec); });
   message_writer_ = session->GetMessageWriter();
   session->Start();
 }
 
-void Client::OnServerSocketClosed(const std::error_code &ec) {
-  HandleErrorCode(ec);
+void Client::OnServerReadError(const std::error_code &ec) {
+  Log::Error("disconnect from server {} {}", ec.value(), ec.message());
+  for (auto &v : proxy_socket_map_) {
+    v.second->Close();
+  }
+  proxy_socket_map_.clear();
+}
+
+void Client::OnServerWriteError(const std::error_code &ec) {
+  Log::Error("write to server error {} {}", ec.value(), ec.message());
 }
 
 void Client::BeginProxy(std::uint16_t id) {
@@ -68,23 +76,25 @@ void Client::BeginProxy(std::uint16_t id) {
                                this](ProxyData &proxy_data) -> void {
     auto ec = message_writer_.Write(ServerMessage::kDataTransfer, proxy_data);
     if (ec) {
-      OnServerSocketClosed(ec);
+      OnServerWriteError(ec);
       return;
     }
     proxy_socket_ptr->ReadOnce();
   });
   proxy_socket_ptr->SetOnReadError(
-      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+      [proxy_socket_ptr, this](std::uint16_t id,
+                               const std::error_code &ec) -> void {
         HandleErrorCode(ec);
         ServerMessage::ClientProxySocketClosed msg{id};
         auto err =
             message_writer_.Write(ServerMessage::kClientProxySocketClosed, msg);
         if (err) {
-          OnServerSocketClosed(err);
+          OnServerWriteError(err);
         }
       });
   proxy_socket_ptr->SetOnWriteError(
-      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+      [proxy_socket_ptr, this](std::uint16_t id,
+                               const std::error_code &ec) -> void {
         HandleErrorCode(ec);
       });
   proxy_socket_ptr->ReadOnce();
@@ -113,7 +123,7 @@ void Client::InitMessageHandler() {
               }
               auto err =
                   message_writer_.Write(ServerMessage::kNewProxyResult, result);
-              if (err) OnServerSocketClosed(err);
+              if (err) OnServerWriteError(err);
             });
       });
   message_handler_

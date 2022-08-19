@@ -29,7 +29,8 @@ class Client {
   void Handshake();
   void BeginMessageLoop();
   void InitMessageHandler();
-  void OnServerSocketClosed(const std::error_code &ec);
+  void OnServerReadError(const std::error_code &ec);
+  void OnServerWriteError(const std::error_code &ec);
   void BeginProxy(std::uint16_t id);
 };
 

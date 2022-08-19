@@ -93,6 +93,10 @@ void Server::Proxy(SocketPtr socket_ptr) {
   message_writer_.Write(ClientMessage::kNewProxy, msg);
 }
 
+void Server::OnClientWriteError(const std::error_code &ec) {
+  Log::Error("write to client error {} {}", ec.value(), ec.message());
+}
+
 void Server::BeginProxy(std::uint16_t id) {
   Log::Info("id:{},begin proxy", id);
   auto proxy_socket_ptr = proxy_socket_map_[id];
@@ -100,22 +104,24 @@ void Server::BeginProxy(std::uint16_t id) {
                                this](ProxyData &proxy_data) -> void {
     auto ec = message_writer_.Write(ClientMessage::kDataTransfer, proxy_data);
     if (ec) {
-      OnClientSocketError(ec);
+      OnClientWriteError(ec);
       return;
     }
     proxy_socket_ptr->ReadOnce();
   });
   proxy_socket_ptr->SetOnReadError(
-      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+      [proxy_socket_ptr, this](std::uint16_t id,
+                               const std::error_code &ec) -> void {
         HandleErrorCode(ec);
         if (is_client_connected_) {
           ClientMessage::ServerProxySocketClosed msg{id};
           auto err = message_writer_.Write(ClientMessage::kDataTransfer, msg);
-          if (err) OnClientSocketError(err);
+          if (err) OnClientWriteError(ec);
         }
       });
   proxy_socket_ptr->SetOnWriteError(
-      [proxy_socket_ptr, this](std::uint16_t id, const std::error_code &ec) -> void {
+      [proxy_socket_ptr, this](std::uint16_t id,
+                               const std::error_code &ec) -> void {
         HandleErrorCode(ec);
       });
   proxy_socket_ptr->ReadOnce();
@@ -177,9 +183,13 @@ void Server::Handshake(SocketPtr socket_ptr) {
       });
 }
 
-void Server::OnClientSocketError(const std::error_code &ec) {
-  Log::Error("lost connection with client {} {}", ec.value(), ec.message());
+void Server::OnClientReadError(const std::error_code &ec) {
+  Log::Error("disconnect from client {} {}", ec.value(), ec.message());
   is_client_connected_ = false;
+  for (auto &v : proxy_socket_map_) {
+    v.second->Close();
+  }
+  proxy_socket_map_.clear();
 }
 
 void Server::AcceptClient(SocketPtr socket_ptr) {
@@ -188,7 +198,7 @@ void Server::AcceptClient(SocketPtr socket_ptr) {
             socket_ptr->remote_endpoint().port());
   auto session = std::make_shared<Session>(
       socket_ptr, message_handler_,
-      [this](const std::error_code &ec) -> void { OnClientSocketError(ec); });
+      [this](const std::error_code &ec) -> void { OnClientReadError(ec); });
   message_writer_ = session->GetMessageWriter();
   session->Start();
 }

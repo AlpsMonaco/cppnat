@@ -28,7 +28,8 @@ class Server {
   void Handshake(SocketPtr socket_ptr);
   void Proxy(SocketPtr socket_ptr);
   void AcceptClient(SocketPtr socket_ptr);
-  void OnClientSocketError(const std::error_code &ec);
+  void OnClientReadError(const std::error_code &ec);
+  void OnClientWriteError(const std::error_code &ec);
   void InitMessageHandler();
   void BeginProxy(std::uint16_t id);
   void AcceptSocket();

@@ -42,10 +42,11 @@ class Log {
                          socket_ptr->remote_endpoint().port());
   }
 
-  static void SocketErrorEvent(const std::string& event, SocketPtr socket_ptr) {
-    Ins().log_ptr_->error("{} {}:{}", event,
+  static void SocketErrorEvent(const std::string& event, SocketPtr socket_ptr,
+                               const std::error_code& ec) {
+    Ins().log_ptr_->error("{} {}:{} {}", event,
                           socket_ptr->remote_endpoint().address().to_string(),
-                          socket_ptr->remote_endpoint().port());
+                          socket_ptr->remote_endpoint().port(), ec.message());
   }
 
  protected:
