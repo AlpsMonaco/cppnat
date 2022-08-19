@@ -48,4 +48,4 @@ based on asio,this library performs well under high concurrency as well.
 
 ## Project
 
-This library is written with `Visual Studio Code`,you could only this project of root path and launch it directly.
+This library is written with `Visual Studio Code`,you could open this project of root path and launch it directly.
