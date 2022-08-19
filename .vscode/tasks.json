@@ -17,6 +17,7 @@
 				"${workspaceFolder}/src/server/main.cpp",
 				"-I${workspaceFolder}/third_party/asio/asio/include",
 				"-I${workspaceFolder}/third_party/spdlog/include/",
+				"-I${workspaceFolder}/third_party/jsonserializer/include/",
 				"-o",
 				"${workspaceFolder}/bin/server",
 				"-lpthread"
@@ -48,6 +49,7 @@
 				"${workspaceFolder}/src/client/main.cpp",
 				"-I${workspaceFolder}/third_party/asio/asio/include",
 				"-I${workspaceFolder}/third_party/spdlog/include/",
+				"-I${workspaceFolder}/third_party/jsonserializer/include/",
 				"-o",
 				"${workspaceFolder}/bin/client",
 				"-lpthread"
@@ -57,6 +59,72 @@
 			},
 			"problemMatcher": [
 				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "cppbuild",
+			"label": "(windows) build server",
+			"command": "cl.exe",
+			"args": [
+				"/Zi",
+				"/EHsc",
+				"/MDd",
+				"/nologo",
+				"/std:c++20",
+				"/D_WIN32_WINNT=0x0601",
+				"/Fe${workspaceFolder}\\bin\\server.exe",
+				"${workspaceFolder}\\src\\message.cpp",
+				"${workspaceFolder}\\src\\proxy_socket.cpp",
+				"${workspaceFolder}\\src\\server.cpp",
+				"${workspaceFolder}\\src\\session.cpp",
+				"${workspaceFolder}\\src\\log.cpp",
+				"${workspaceFolder}\\src\\server\\main.cpp",
+				"/I${workspaceFolder}\\third_party\\asio\\asio\\include",
+				"/I${workspaceFolder}\\third_party\\spdlog\\include",
+				"/I${workspaceFolder}\\third_party\\jsonserializer\\include",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}\\bin"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "cppbuild",
+			"label": "(windows) build client",
+			"command": "cl.exe",
+			"args": [
+				"/Zi",
+				"/EHsc",
+				"/MDd",
+				"/nologo",
+				"/std:c++20",
+				"/D_WIN32_WINNT=0x0601",
+				"/Fe${workspaceFolder}\\bin\\client.exe",
+				"${workspaceFolder}\\src\\message.cpp",
+				"${workspaceFolder}\\src\\proxy_socket.cpp",
+				"${workspaceFolder}\\src\\client.cpp",
+				"${workspaceFolder}\\src\\session.cpp",
+				"${workspaceFolder}\\src\\log.cpp",
+				"${workspaceFolder}\\src\\client\\main.cpp",
+				"/I${workspaceFolder}\\third_party\\asio\\asio\\include",
+				"/I${workspaceFolder}\\third_party\\spdlog\\include",
+				"/I${workspaceFolder}\\third_party\\jsonserializer\\include",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}\\bin"
+			},
+			"problemMatcher": [
+				"$msCompile"
 			],
 			"group": {
 				"kind": "build",

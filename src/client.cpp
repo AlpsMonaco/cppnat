@@ -36,7 +36,7 @@ void Client::Start() {
             proxy_endpoint_.address().to_string(), proxy_endpoint_.port());
   InitMessageHandler();
   server_socket_ptr_ = std::make_shared<asio::ip::tcp::socket>(ios_);
-  Log::Info("connection to server {}:{}",
+  Log::Info("connecting to server {}:{}",
             server_endpoint_.address().to_string(), server_endpoint_.port());
   server_socket_ptr_->async_connect(server_endpoint_,
                                     [&](const std::error_code &ec) -> void {

@@ -19,6 +19,12 @@ class Log {
     spdlog::error(fmt, std::forward<Args>(args)...);
   }
 
+  template <typename T>
+  static void Error(const T& msg) {
+    Ins().log_ptr_->error(msg);
+    spdlog::error(msg);
+  }
+
   template <typename... Args>
   static void Info(spdlog::format_string_t<Args...> fmt, Args&&... args) {
     Ins().log_ptr_->info(fmt, std::forward<Args>(args)...);
@@ -48,11 +54,12 @@ class Log {
                           socket_ptr->remote_endpoint().address().to_string(),
                           socket_ptr->remote_endpoint().port(), ec.message());
   }
+  static void SetLogName(const std::string& log_name);
 
  protected:
   using LogPtr = std::shared_ptr<spdlog::logger>;
-  Log();
-  static Log& Ins();
+  Log(const std::string& log_name);
+  static Log& Ins(const std::string& log_name = "cppnat");
   void LogLevel(spdlog::level::level_enum level);
   LogPtr log_ptr_;
 };

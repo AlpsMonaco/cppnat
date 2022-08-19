@@ -101,6 +101,52 @@
                     "ignoreFailures": true
                 }
             ]
-        }
+        },
+        {
+            "name": "(Windows) build and launch server",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/server.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/",
+            "environment": [],
+            "console": "integratedTerminal",
+            "preLaunchTask": "(windows) build server"
+        },
+        {
+            "name": "(Windows) launch server",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/server.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/",
+            "environment": [],
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "(Windows) build and launch client",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/client.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/",
+            "environment": [],
+            "console": "integratedTerminal",
+            "preLaunchTask": "(windows) build client"
+        },
+        {
+            "name": "(Windows) launch client",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/client.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/",
+            "environment": [],
+            "console": "integratedTerminal",
+        },
     ]
 }

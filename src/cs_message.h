@@ -57,7 +57,7 @@ class ClientMessage {
   };
 
   struct NewProxy : public Message {
-    size_t id;
+    std::uint16_t id;
   };
 
   using NewProxyResult = ServerMessage::NewProxyResult;
