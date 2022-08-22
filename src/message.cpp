@@ -9,15 +9,17 @@ MessageWriter::~MessageWriter() {}
 MessageHandler::MessageHandler() : callback_map_() {}
 MessageHandler::~MessageHandler() {}
 
-void MessageHandler::Handle(Protocol::Cmd cmd, const char *data,
-                            SocketPtr socket_ptr) {
-  MessageWriter writer(socket_ptr);
-  callback_map_[cmd](data, writer);
+void MessageHandler::Handle(Protocol::Cmd cmd, const char* data,
+                            SocketPtr socket_ptr)
+{
+    MessageWriter writer(socket_ptr);
+    callback_map_[cmd](data, writer);
 }
 
-void MessageHandler::Handle(Protocol::Cmd cmd, const char *data,
-                            SocketPtr socket_ptr) const {
-  const_cast<MessageHandler &>(*this).Handle(cmd, data, socket_ptr);
+void MessageHandler::Handle(Protocol::Cmd cmd, const char* data,
+                            SocketPtr socket_ptr) const
+{
+    const_cast<MessageHandler&>(*this).Handle(cmd, data, socket_ptr);
 }
 
 NAMESPACE_CPPNAT_END
