@@ -5,7 +5,7 @@ project(cppnat)
 set(CMAKE_CXX_STANDARD 20)
 
 if(WIN32)
-  add_compile_definitions(_WIN32_WINNT=0x0601)
+    add_compile_definitions(_WIN32_WINNT=0x0601)
 endif()
 
 add_library(CPPNAT_LIBRARY STATIC 
@@ -22,10 +22,18 @@ target_include_directories(CPPNAT_LIBRARY
         ${PROJECT_SOURCE_DIR}/third_party/jsonserializer/include/
 )
 
+if (UNIX)
+    target_link_libraries(CPPNAT_LIBRARY pthread)
+endif()
+
 add_executable(SERVER src/server.cpp src/server/main.cpp)
 
 set_target_properties(SERVER PROPERTIES OUTPUT_NAME "server")
-set_target_properties(SERVER PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:SERVER>)
+if(WIN32)
+    set_target_properties(SERVER PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:SERVER>)
+else()
+    set_target_properties(SERVER PROPERTIES RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_SOURCE_DIR}/bin/)
+endif()
 add_custom_command(TARGET SERVER POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/bin/server.json $<TARGET_FILE_DIR:SERVER>)
 
 target_link_libraries(SERVER
@@ -41,5 +49,9 @@ target_link_libraries(CLIENT
 )
 
 set_target_properties(CLIENT PROPERTIES OUTPUT_NAME "client")
-set_target_properties(CLIENT PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:CLIENT>)
+if(WIN32)
+    set_target_properties(CLIENT PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:CLIENT>)
+else()
+    set_target_properties(CLIENT PROPERTIES RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_SOURCE_DIR}/bin/)
+endif()
 add_custom_command(TARGET CLIENT POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/bin/client.json $<TARGET_FILE_DIR:CLIENT>)
