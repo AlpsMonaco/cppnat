@@ -14,7 +14,7 @@ The default `server.json` and `client.json` are also included in the `bin/` dire
 
 ### Windows
 ```bat
-mkdir build & cd build && cmake .. ;
+mkdir build & cd build && cmake .. 
 ```
 Open `cppnat.sln` and compile `cppnat` using `Visual Studio`.  
 You will have `server.exe` and `client.exe` in `Visual Studio` runtime output directory,could be `Release/` or `Debug/`.  
