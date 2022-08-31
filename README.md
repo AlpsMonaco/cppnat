@@ -2,6 +2,8 @@
 
 writen in cpp,cppnat is a NAT reverse proxy tool (aslo known as a hole punching tool) helps you expose your private IP and port and bind them onto a server with public IP,access your private service anywhere.
 
+[README](README.md) | [中文文档](README.zh-CN.md)
+
 ## build (recommended)
 1. Init git submodules in `thirt_party/`.  
 2. Use CMake to generate platform project file.`CmakeLists.txt` file is in the root path of this repository.  
@@ -17,7 +19,8 @@ The default `server.json` and `client.json` are also included in the `bin/` dire
 mkdir build & cd build && cmake .. 
 ```
 Open `cppnat.sln` and compile `cppnat` using `Visual Studio`.  
-You will have `server.exe` and `client.exe` in `Visual Studio` runtime output directory,could be `Release/` or `Debug/`.  
+You will have `server.exe` and `client.exe` in `Visual Studio` runtime output directory,  
+could be `Release/` or `Debug/` depends on which mode you choose to compile.  
 Also `server.json` and `client.json` will be copied to the directory,  
 change them to satisfy you needs.
 
@@ -26,7 +29,8 @@ change them to satisfy you needs.
 1. Init git submodules in `thirt_party/`.
 2. run `build_server.sh` and `build_client.sh` on linux os, requires at least `g++ 10`.  
 For Windows system with MSVC compiler `cl.exe` has installed,run `build_server.bat` and `build_client.bat`.
-3. If the compile is successful,you will have `server` and `client` in the `bin/` directory.
+3. If the compile is successful,you will have `server` and `client` in the `bin/` directory.  
+The default `server.json` and `client.json` are also included in the `bin/` directory,change them to satisfy you needs.
 
 ## run
 There are `bin/server.json` and `bin/client.json` template config file in the `bin/` directory.Simply change them to satisfy you needs.
@@ -47,8 +51,8 @@ There are only two keys in the config json file indicates on which ip and which 
 
 
 ### client
-`bin/client` is typically dispatched on a computer without a public ip but able to connect to the Internet with NAT.A client helps you expose you service 
-such as ssh or rdp in the computer to the Internet that you could access it anywhere.  
+`bin/client` is typically dispatched on a computer without a public ip but able to connect to the Internet with NAT.  
+A client helps you expose you service such as ssh or rdp to the Internet that you could access it anywhere.  
 
 #### `client.json`
 ```json
