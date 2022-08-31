@@ -6,7 +6,7 @@ writen in cpp,cppnat is a NAT reverse proxy tool (aslo known as a hole punching 
 
 ## build (recommended)
 1. Init git submodules in `thirt_party/`.  
-2. Use CMake to generate platform project file.`CmakeLists.txt` file is in the root path of this repository.  
+2. Use `CMake` to generate platform project file.`CmakeLists.txt` file is in the root path of this repository.  
 ### Linux
 ```sh
 mkdir build ; cd build ; cmake .. ; make 

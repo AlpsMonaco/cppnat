@@ -4,7 +4,7 @@ cppnat 是一个NAT内网穿透工具,用来帮助你暴露你的内网的服务
 
 ## 编译 (推荐)
 1. 初始化 `thirt_party/` 下的git子模块。  
-2. 使用CMake来生成项目文件。`CMakeLists.txt`在这个仓库的根目录中。  
+2. 使用`CMake`来生成项目文件。`CMakeLists.txt`在这个仓库的根目录中。  
 ### Linux
 ```sh
 mkdir build ; cd build ; cmake .. ; make 
