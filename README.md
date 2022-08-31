@@ -38,7 +38,7 @@ There are `bin/server.json` and `bin/client.json` template config file in the `b
 ## config
 
 ### server
-`bin/server` is typically dispatched on a server with public ip.Every TCP connection to the ip and the port you have configured will redirect to nat client.  
+`bin/server` is typically dispatched on a server with public ip.Every TCP connection to the ip and the port you have configured will be redirected to nat client.  
 
 #### `server.json`
 ```json
