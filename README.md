@@ -2,7 +2,27 @@
 
 writen in cpp,cppnat is a NAT reverse proxy tool (aslo known as a hole punching tool) helps you expose your private IP and port and bind them onto a server with public IP,access your private service anywhere.
 
-## build
+## build (recommended)
+1. Init git submodules in `thirt_party/`.  
+2. Use CMake to generate platform project file.`CmakeLists.txt` file is in the root path of this repository.  
+### Linux
+```sh
+mkdir build ; cd build ; cmake .. ; make 
+```
+If the compile is successful,you will have both `server` and `client` in the `bin/` directory of this repository.  
+The default `server.json` and `client.json` are also included in the `bin/` directory,change them to satisfy you needs.
+
+### Windows
+```bat
+mkdir build & cd build && cmake .. ;
+```
+Open `cppnat.sln` and compile `cppnat` using `Visual Studio`.  
+You will have `server.exe` and `client.exe` in `Visual Studio` runtime output directory,could be `Release/` or `Debug/`.  
+Also `server.json` and `client.json` will be copied to the directory,  
+change them to satisfy you needs.
+
+
+## build (deprecated)
 1. Init git submodules in `thirt_party/`.
 2. run `build_server.sh` and `build_client.sh` on linux os, requires at least `g++ 10`.  
 For Windows system with MSVC compiler `cl.exe` has installed,run `build_server.bat` and `build_client.bat`.
