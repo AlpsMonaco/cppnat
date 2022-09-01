@@ -43,7 +43,7 @@ There are `bin/server.json` and `bin/client.json` template config file in the `b
 #### `server.json`
 ```json
 {
-    "bind_ip": "127.0.0.1",
+    "bind_ip": "0.0.0.0",
     "bind_port": 54432
 }
 ```
