@@ -1,6 +1,6 @@
 {
     "_comment_server": "cppnat server endpoint",
-    "server_ip": "127.0.0.1",
+    "server_ip": "0.0.0.0",
     "server_port": 54432,
     "_comment_proxy": "endpoint you want to expose",
     "proxy_ip": "127.0.0.1",
