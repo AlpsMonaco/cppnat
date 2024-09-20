@@ -26,6 +26,10 @@ if (UNIX)
     target_link_libraries(CPPNAT_LIBRARY pthread)
 endif()
 
+if (MINGW)
+    target_link_libraries(CPPNAT_LIBRARY ws2_32 mswsock)
+endif()
+
 add_executable(SERVER src/server.cpp src/server/main.cpp)
 
 set_target_properties(SERVER PROPERTIES OUTPUT_NAME "server")
